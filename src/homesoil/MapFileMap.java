@@ -70,14 +70,6 @@ public final class MapFileMap extends HashMap<String, Object> {
         return convertToInteger(getObject(key));
     }
 
-    private static int convertToInteger(Object value) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        } else {
-            return Integer.parseInt(value.toString());
-        }
-    }
-
     /**
      * This method returns a value as a map file map; it will copy any other map
      * into a map file map, converting they keys to strings if required.
@@ -401,5 +393,22 @@ public final class MapFileMap extends HashMap<String, Object> {
          * @return A map containing the data to save to represent this object.
          */
         Map<?, ?> toMap();
+    }
+
+    ////////////////////////////////
+    // Implementation
+    /**
+     * This method converts an object to an integer; if it's not already a
+     * number, this will convert it to a string and parse it.
+     *
+     * @param value The object to convert.
+     * @return The same value, but now an integer.
+     */
+    private static int convertToInteger(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        } else {
+            return Integer.parseInt(value.toString());
+        }
     }
 }
