@@ -23,7 +23,8 @@ public class PlayerInfoMap {
     private final File playersFile;
     private final HomeSoilPlugin plugin;
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
-    private Set<ChunkPosition> lazyHomeChunks = null;
+    private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
+    private int homeChunksGenCount = 0;
     private static final int spawnRadiusInChunks = 32;
     private final Random random = new Random();
 
@@ -48,7 +49,6 @@ public class PlayerInfoMap {
             ChunkPosition home = getInitialChunkPosition(player.getWorld());
             info = new PlayerInfo(home);
             infos.put(name, info);
-            lazyHomeChunks = null;
             save();
         }
 
@@ -74,17 +74,19 @@ public class PlayerInfoMap {
      * @return True if the chunk is anyone's home chunk.
      */
     public Set<ChunkPosition> getHomeChunks() {
-        if (lazyHomeChunks == null) {
-            ImmutableSet.Builder<ChunkPosition> b = ImmutableSet.builder();
+        int currentGenCount = PlayerInfo.getGenerationCount();
+        
+        if (homeChunksGenCount != currentGenCount) {
+            homeChunksGenCount = currentGenCount;
+
+            homeChunks.clear();
 
             for (PlayerInfo info : infos.values()) {
-                b.add(info.getHomeChunk());
+                homeChunks.add(info.getHomeChunk());
             }
-
-            lazyHomeChunks = b.build();
         }
 
-        return lazyHomeChunks;
+        return homeChunks;
     }
 
     /**
@@ -114,7 +116,6 @@ public class PlayerInfoMap {
         logger.info("Loading HomeSoil State");
 
         infos.clear();
-        lazyHomeChunks = null;
 
         if (playersFile.exists()) {
             MapFileMap.read(playersFile).copyInto(infos, PlayerInfo.class);

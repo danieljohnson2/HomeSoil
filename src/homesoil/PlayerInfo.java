@@ -7,6 +7,7 @@ package homesoil;
 import com.google.common.base.*;
 import com.google.common.collect.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import org.bukkit.*;
 import org.bukkit.block.*;
 
@@ -22,6 +23,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
 
     public PlayerInfo(ChunkPosition homeChunk) {
         this.homeChunk = Preconditions.checkNotNull(homeChunk);
+        incrementGenerationCount();
     }
 
     /**
@@ -40,6 +42,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
      */
     public void setHomeChunk(ChunkPosition pos) {
         homeChunk = Preconditions.checkNotNull(pos);
+        incrementGenerationCount();
     }
 
     /**
@@ -84,11 +87,33 @@ public final class PlayerInfo implements MapFileMap.Storable {
 
         return new Location(world, blockX, startY, blockZ);
     }
+    ////////////////////////////////
+    // Generation Count
+    private static final AtomicInteger playerInfoGenerationCount = new AtomicInteger();
+
+    /**
+     * This method returns a number that is incremented whenever any PlayerInfo
+     * is created or changed. We can regenerated cached data when this changes.
+     *
+     * @return A number that changes when PlayerInfos do.
+     */
+    public static int getGenerationCount() {
+        return playerInfoGenerationCount.get();
+    }
+
+    /**
+     * This method increments the value getGenerationCount() returns; we call
+     * this when any PlayerInfo is changed or even created.
+     */
+    private static void incrementGenerationCount() {
+        playerInfoGenerationCount.incrementAndGet();
+    }
 
     ////////////////////////////////
     // MapFileMap Storage
     public PlayerInfo(MapFileMap storage) {
         this.homeChunk = storage.getValue("home", ChunkPosition.class);
+        incrementGenerationCount();
     }
 
     @Override
