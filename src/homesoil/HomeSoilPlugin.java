@@ -10,6 +10,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.world.*;
 import org.bukkit.plugin.java.*;
 
+// TODO: do not regenerate the nether or the end!
 // TODO: eye of ender for each player
 // TODO: eye of ender leads (or teleports) to player home chunk
 // TODO: players can take over other players chunks
