@@ -24,7 +24,7 @@ public class PlayerInfoMap {
     private final HomeSoilPlugin plugin;
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private Set<ChunkPosition> lazyHomeChunks = null;
-    private final int spawnRadiusInChunks = 32;
+    private static final int spawnRadiusInChunks = 32;
     private final Random random = new Random();
 
     public PlayerInfoMap(File playersFile, HomeSoilPlugin plugin) {
