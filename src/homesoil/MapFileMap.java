@@ -67,13 +67,15 @@ public final class MapFileMap extends HashMap<String, Object> {
      * @throws IllegalArgumentException If the key is not found.
      */
     public int getInteger(String key) {
-        Object value = getObject(key);
+        return convertToInteger(getObject(key));
+    }
 
+    private static int convertToInteger(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
+        } else {
+            return Integer.parseInt(value.toString());
         }
-
-        return Integer.parseInt(value.toString());
     }
 
     /**
@@ -114,14 +116,7 @@ public final class MapFileMap extends HashMap<String, Object> {
             ArrayList<Object> list = Lists.newArrayList();
 
             for (Map.Entry<?, ?> e : map.entrySet()) {
-                Object indexKey = e.getKey();
-                int index;
-
-                if (indexKey instanceof Number) {
-                    index = ((Number) indexKey).intValue();
-                } else {
-                    index = Integer.parseInt(indexKey.toString());
-                }
+                int index = convertToInteger(e.getKey());
 
                 while (index >= list.size()) {
                     list.add(null);
