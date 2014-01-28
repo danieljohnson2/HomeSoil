@@ -175,9 +175,9 @@ public final class MapFileMap extends HashMap<String, Object> {
      * given; it will convert each one to the type indicated by 'valueClass' as
      * per getValue().
      *
-     * @param <T> The type of the value to return.
+     * @param <T> The type of the value to extract.
      * @param destination The map to be populated with keys and values.
-     * @param valueClass The type of the value to return, again.
+     * @param valueClass The type of the value to extract, again.
      * @throws IllegalArgumentException If the key is not found.
      */
     public <T extends Storable> void copyInto(Map<? super String, ? super T> destination, Class<T> valueClass) {
@@ -188,33 +188,7 @@ public final class MapFileMap extends HashMap<String, Object> {
 
     ////////////////////////////////
     // Map Conversion
-    private MapFileMap(List<String> lines) {
-        this(lines.iterator());
-    }
-
-    private MapFileMap(Iterator<String> iter) {
-        while (iter.hasNext()) {
-            String line = iter.next();
-
-            if (line.trim().equals("]")) {
-                break;
-            }
-
-            int split = line.indexOf("=");
-
-            if (split >= 0) {
-                String key = unescape(line.substring(0, split));
-                String value = line.substring(split + 1);
-
-                if (value.trim().equals("[")) {
-                    put(key, new MapFileMap(iter));
-                } else {
-                    put(key, unescape(value));
-                }
-            }
-        }
-    }
-
+    //
     /**
      * This converts a map into a list of lines you can save. We can convert any
      * map, not just a MapTableMap. This method converts all keys and values to
@@ -254,6 +228,51 @@ public final class MapFileMap extends HashMap<String, Object> {
     }
 
     /**
+     * This method populates the map with the entries encoded in the lines
+     * given. These lines should be in the format getLinesFromMap() produces.
+     *
+     * Any existing entries in this map are removed.
+     *
+     * @param lines The lines to read into the map.
+     */
+    public void loadFromLines(List<String> lines) {
+        clear();
+        loadFromLines(lines.iterator());
+    }
+
+    /**
+     * This method is the real implementation of loadFromLines(); it drains an
+     * iterator to get the lines, which allows us to pass the iterator on to a
+     * sub-map when required.
+     *
+     * @param iter The iterator to drain.
+     */
+    private void loadFromLines(Iterator<String> iter) {
+        while (iter.hasNext()) {
+            String line = iter.next();
+
+            if (line.trim().equals("]")) {
+                break;
+            }
+
+            int split = line.indexOf("=");
+
+            if (split >= 0) {
+                String key = unescape(line.substring(0, split));
+                String value = line.substring(split + 1);
+
+                if (value.trim().equals("[")) {
+                    MapFileMap submap = new MapFileMap();
+                    submap.loadFromLines(iter);
+                    put(key, submap);
+                } else {
+                    put(key, unescape(value));
+                }
+            }
+        }
+    }
+
+    /**
      * This method adds lines to a builder to generate the output for the map
      * file. This writes a single map entry, but that entry might have a map or
      * list as its value.
@@ -287,7 +306,7 @@ public final class MapFileMap extends HashMap<String, Object> {
      * @param text The text to escape.
      * @return The 'safe' text that contains no dangerous characters.
      */
-    public static String escape(String text) {
+    private static String escape(String text) {
         if (text.equals("[")) {
             return "§[";
         }
@@ -306,7 +325,7 @@ public final class MapFileMap extends HashMap<String, Object> {
      * @param text The text to unescape.
      * @return The normal text restored.
      */
-    public static String unescape(String text) {
+    private static String unescape(String text) {
         StringBuilder b = new StringBuilder(text);
 
         for (int i = 0; i < b.length() - 1; ++i) {
@@ -337,11 +356,13 @@ public final class MapFileMap extends HashMap<String, Object> {
      * This method reads the files created by write().
      *
      * @param file The file to read from.
-     * @return The new map read from the file.
+     * @return The new map, read from the file.
      */
     public static MapFileMap read(File file) {
         try {
-            return new MapFileMap(Files.readLines(file, Charsets.UTF_8));
+            MapFileMap map = new MapFileMap();
+            map.loadFromLines(Files.readLines(file, Charsets.UTF_8));
+            return map;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
