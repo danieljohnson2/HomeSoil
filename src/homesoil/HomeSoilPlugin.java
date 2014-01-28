@@ -1,5 +1,6 @@
 package homesoil;
 
+import com.google.common.base.*;
 import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
@@ -91,15 +92,24 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent e) {
         if (!playerInfos.isKnown(e.getPlayer())) {
             PlayerInfo info = playerInfos.get(e.getPlayer());
-            Location spawn = info.findPlayerStart(getServer());
-            e.getPlayer().teleport(spawn);
+            Optional<Location> spawn = info.findPlayerStart(getServer());
+
+            if (spawn.isPresent()) {
+                e.getPlayer().teleport(spawn.get());
+            }
+
             saveIfNeeded();
         }
     }
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
-        e.setRespawnLocation(playerInfos.get(e.getPlayer()).findPlayerStart(getServer()));
+        PlayerInfo info = playerInfos.get(e.getPlayer());
+        Optional<Location> spawn = info.findPlayerStart(getServer());
+
+        if (spawn.isPresent()) {
+            e.setRespawnLocation(spawn.get());
+        }
     }
 
     @EventHandler

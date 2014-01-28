@@ -15,10 +15,9 @@ import org.bukkit.block.*;
  */
 public final class PlayerInfo implements MapFileMap.Storable {
 
-    private ChunkPosition homeChunk;
+    private ChunkPosition homeChunk = new ChunkPosition(0, 0, "world");
 
-    public PlayerInfo(ChunkPosition homeChunk) {
-        this.homeChunk = Preconditions.checkNotNull(homeChunk);
+    public PlayerInfo() {
         incrementGenerationCount();
     }
 
@@ -42,15 +41,16 @@ public final class PlayerInfo implements MapFileMap.Storable {
     }
 
     /**
-     * this method finds a place to put the player when he spawns. It will be at
+     * This method finds a place to put the player when he spawns. It will be at
      * the center of the home chunk of this player, but its y position is the
-     * result of a search; we look for a non-air block with two air blocks on
-     * top.
+     * result of a search; we look for a non-air, non-liquid block with two air
+     * blocks on top.
      *
      * @param server The server in which the player will spawn.
-     * @return The location to spawn him.
+     * @return The location to spawn him; absent if no suitable location could
+     * be found.
      */
-    public Location findPlayerStart(Server server) {
+    public Optional<Location> findPlayerStart(Server server) {
         ChunkPosition pos = getHomeChunk();
         World world = pos.getWorld(server);
         int blockX = pos.x * 16 + 8;
@@ -64,8 +64,8 @@ public final class PlayerInfo implements MapFileMap.Storable {
 
             if (bl.getType() == Material.AIR) {
                 airCount++;
-            } else if (airCount >= 2) {
-                return new Location(world, blockX, y + 1, blockZ);
+            } else if (airCount >= 2 && !bl.isLiquid()) {
+                return Optional.of(new Location(world, blockX, y + 1, blockZ));
             }
         }
 
@@ -76,12 +76,12 @@ public final class PlayerInfo implements MapFileMap.Storable {
 
             if (bl.getType() == Material.AIR) {
                 airCount++;
-            } else if (airCount >= 2) {
-                return new Location(world, blockX, y - 2, blockZ);
+            } else if (airCount >= 2 && !bl.isLiquid()) {
+                return Optional.of(new Location(world, blockX, y - 2, blockZ));
             }
         }
 
-        return new Location(world, blockX, startY, blockZ);
+        return Optional.absent();
     }
     ////////////////////////////////
     // Generation Count

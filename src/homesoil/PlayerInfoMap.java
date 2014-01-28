@@ -1,10 +1,8 @@
 package homesoil;
 
-import com.google.common.base.*;
 import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
-import java.util.logging.*;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 
@@ -35,8 +33,21 @@ public class PlayerInfoMap {
         PlayerInfo info = infos.get(name);
 
         if (info == null) {
-            ChunkPosition home = getInitialChunkPosition(player.getWorld());
-            info = new PlayerInfo(home);
+            info = new PlayerInfo();
+            World world = player.getWorld();
+            Server server = player.getServer();
+
+            // we'll try many times to find a spawn location
+            // with a valid player start.
+            
+            for (int limit = 0; limit < 256; ++limit) {
+                info.setHomeChunk(getInitialChunkPosition(world));
+
+                if (info.findPlayerStart(server).isPresent()) {
+                    break;
+                }
+            }
+
             infos.put(name, info);
         }
 
