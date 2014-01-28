@@ -16,18 +16,11 @@ import org.bukkit.entity.*;
  */
 public class PlayerInfoMap {
 
-    private final File playersFile;
-    private final HomeSoilPlugin plugin;
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
     private int homeChunksGenCount = 0;
     private static final int spawnRadiusInChunks = 32;
     private final Random random = new Random();
-
-    public PlayerInfoMap(File playersFile, HomeSoilPlugin plugin) {
-        this.playersFile = Preconditions.checkNotNull(playersFile);
-        this.plugin = Preconditions.checkNotNull(plugin);
-    }
 
     /**
      * This method returns the player info object for a player. If there is
@@ -45,7 +38,6 @@ public class PlayerInfoMap {
             ChunkPosition home = getInitialChunkPosition(player.getWorld());
             info = new PlayerInfo(home);
             infos.put(name, info);
-            save();
         }
 
         return info;
@@ -71,7 +63,7 @@ public class PlayerInfoMap {
      */
     public Set<ChunkPosition> getHomeChunks() {
         int currentGenCount = PlayerInfo.getGenerationCount();
-        
+
         if (homeChunksGenCount != currentGenCount) {
             homeChunksGenCount = currentGenCount;
 
@@ -105,25 +97,36 @@ public class PlayerInfoMap {
             }
         }
     }
+    ////////////////////////////////
+    // Loading and Saving
+    //
+    private int loadedGenerationCount;
 
-    public void load() {
-        Logger logger = getLogger();
-
-        logger.info("Loading HomeSoil State");
-
-        infos.clear();
-
-        if (playersFile.exists()) {
-            MapFileMap.read(playersFile).copyInto(infos, PlayerInfo.class);
-        }
+    /**
+     * This method populates the map with the contents of the player file.
+     */
+    public void load(File source) {
+        MapFileMap.read(source).copyInto(infos, PlayerInfo.class);
+        loadedGenerationCount = PlayerInfo.getGenerationCount();
     }
 
-    public void save() {
-        getLogger().info("Saving HomeSoil State");
-        MapFileMap.write(playersFile, infos);
+    /**
+     * This method writes the player data out to the players file. We call this
+     * whenever anything is changed.
+     */
+    public void save(File destination) {
+        MapFileMap.write(destination, infos);
+        loadedGenerationCount = PlayerInfo.getGenerationCount();
     }
 
-    private Logger getLogger() {
-        return plugin.getLogger();
+    /**
+     * This method returns true if there might be changes to save; this checks
+     * the global generation count so its not entirely accurate, but it should
+     * never return false if there are changes to save.
+     *
+     * @return True if save() should be called.
+     */
+    public boolean shouldSave() {
+        return loadedGenerationCount != PlayerInfo.getGenerationCount();
     }
 }

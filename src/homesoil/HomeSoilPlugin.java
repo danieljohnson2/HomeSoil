@@ -22,17 +22,69 @@ import org.bukkit.plugin.java.*;
  */
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
+    private static final File playersFile = new File("HomeSoil.txt");
     private final Set<ChunkPosition> alreadyLoadedOnce = Sets.newHashSet();
-    private final PlayerInfoMap playerInfos = new PlayerInfoMap(
-            new File("HomeSoil.txt"),
-            this);
+    private final PlayerInfoMap playerInfos = new PlayerInfoMap();
 
+    /**
+     * This method loads player data from the HomeSoil file.
+     */
+    private void load() {
+        getLogger().info("Loading HomeSoil State");
+
+        if (playersFile.exists()) {
+            playerInfos.load(playersFile);
+        }
+    }
+
+    /**
+     * This method saves any changes to the HomeSoil file; however this checks
+     * for changes and only saves if there might be some.
+     */
+    private void saveIfNeeded() {
+        if (playerInfos.shouldSave()) {
+            getLogger().info("Saving HomeSoil State");
+            playerInfos.save(playersFile);
+        }
+    }
+
+    /**
+     * This method regenerates a chunk if it needs to be; But only on loading
+     * old ones, and it checks to ensure that it won't regen a home chunk nor
+     * any chunk already regenerated once.
+     *
+     * As an optimization we don't even call this for new chunks but only for
+     * chunks being reloaded.
+     *
+     * @param chunk The chunk to regenerate.
+     */
+    private void regenerateIfNeeded(Chunk chunk) {
+        ChunkPosition pos = ChunkPosition.of(chunk);
+
+        if (alreadyLoadedOnce.add(pos)) {
+            if (playerInfos.getHomeChunks().contains(pos)) {
+                getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
+            } else {
+                chunk.getWorld().regenerateChunk(pos.x, pos.z);
+            }
+        }
+    }
+
+    ////////////////////////////////
+    // Event Handlers
     @Override
     public void onEnable() {
         super.onEnable();
 
-        playerInfos.load();
+        load();
         getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    @Override
+    public void onDisable() {
+        saveIfNeeded();
+
+        super.onDisable();
     }
 
     @EventHandler
@@ -41,6 +93,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             PlayerInfo info = playerInfos.get(e.getPlayer());
             Location spawn = info.findPlayerStart(getServer());
             e.getPlayer().teleport(spawn);
+            saveIfNeeded();
         }
     }
 
@@ -51,19 +104,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
-        Chunk ch = e.getChunk();
-        ChunkPosition pos = ChunkPosition.of(ch);
-
-        if (alreadyLoadedOnce.add(pos)) {
-            Logger logger = getLogger();
-
-            if (!e.isNewChunk()) {
-                if (playerInfos.getHomeChunks().contains(pos)) {
-                    logger.info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
-                } else {
-                    ch.getWorld().regenerateChunk(pos.x, pos.z);
-                }
-            }
+        if (!e.isNewChunk()) {
+            regenerateIfNeeded(e.getChunk());
         }
     }
 
