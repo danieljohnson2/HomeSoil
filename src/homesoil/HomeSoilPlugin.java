@@ -14,6 +14,7 @@ import org.bukkit.plugin.java.*;
 // TODO: eye of ender for each player
 // TODO: eye of ender leads (or teleports) to player home chunk
 // TODO: players can take over other players chunks
+// TODO: something trivial
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
