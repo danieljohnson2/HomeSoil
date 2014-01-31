@@ -25,7 +25,7 @@ public class PlayerInfoMap {
      * none, we create it, and immediately save it.
      *
      * @param player
-     * @return
+     * @return The info object with the player's data.
      */
     public PlayerInfo get(Player player) {
         String name = player.getName();
@@ -39,7 +39,6 @@ public class PlayerInfoMap {
 
             // we'll try many times to find a spawn location
             // with a valid player start.
-            
             for (int limit = 0; limit < 256; ++limit) {
                 info.setHomeChunk(getInitialChunkPosition(world));
 
