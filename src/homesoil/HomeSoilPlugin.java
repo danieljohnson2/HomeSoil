@@ -5,16 +5,21 @@ import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
 import org.bukkit.*;
+import org.bukkit.entity.*;
 import org.bukkit.event.*;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.*;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.*;
 
 // TODO: do not regenerate the nether or the end!
-// TODO: eye of ender for each player
-// TODO: eye of ender leads (or teleports) to player home chunk
+// TODO: ender pearl (or something) for each player
+// TODO: ender pearl leads (or teleports) to player home chunk
 // TODO: players can take over other players chunks
-// TODO: something trivial
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -86,6 +91,61 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         saveIfNeeded();
 
         super.onDisable();
+    }
+
+    @EventHandler
+    public void onProjectileLaunch(ProjectileLaunchEvent e) {
+        Projectile projectile = e.getEntity();
+        ItemStack held = projectile.getShooter().getEquipment().getItemInHand();
+
+        if (held != null && held.getType() == Material.ENDER_PEARL) {
+            ItemMeta itemMeta = held.getItemMeta();
+            if (itemMeta.hasDisplayName()) {
+                String displayName = held.getItemMeta().getDisplayName();
+                OfflinePlayer player = getServer().getOfflinePlayer(displayName);
+
+                if (player != null) {
+                    Optional<PlayerInfo> info = playerInfos.getIfKnown(player);
+
+                    if (info.isPresent()) {
+                        // if a player throws an Ender Pearl named after a playuer, we
+                        // change its effect. Since the pearl itself is gone, and the
+                        // pearl-projectile is a different thing with no special name,
+                        // we'll stash the player info in it.
+
+                        projectile.setMetadata("HS_PlayerInfo", new FixedMetadataValue(this, info.get()));
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onProjectileHit(ProjectileHitEvent e) {
+        Projectile projectile = e.getEntity();
+
+        if (projectile.getType() == EntityType.ENDER_PEARL) {
+            LivingEntity shooter = projectile.getShooter();
+
+            // there should be only one metadata "HS_PlayerInfo", but
+            // whatever; we'll take the first that works.
+            List<MetadataValue> meta = projectile.getMetadata("HS_PlayerInfo");
+
+            for (MetadataValue m : meta) {
+                PlayerInfo info = (PlayerInfo) m.value();
+
+                Optional<Location> spawn = info.findPlayerStart(getServer());
+
+                if (spawn.isPresent()) {
+                    // If we find plauyer info stashed, that means we
+                    // override the teleporation and land the player
+                    // int the designated player's chunk.
+
+                    shooter.teleport(spawn.get());
+                    break;
+                }
+            }
+        }
     }
 
     @EventHandler

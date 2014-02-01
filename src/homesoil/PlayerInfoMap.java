@@ -1,5 +1,6 @@
 package homesoil;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
@@ -54,13 +55,26 @@ public class PlayerInfoMap {
     }
 
     /**
+     * This method retrieves the player info for a player who may be offline; we
+     * cannot generate the player info if the player is offline. This method
+     * will return it if we have it, and return absent if not.
+     *
+     * @param player The player whose info is needed.
+     * @return The info, or absent if the player is not known to this map.
+     */
+    public Optional<PlayerInfo> getIfKnown(OfflinePlayer player) {
+        String name = player.getName();
+        return Optional.fromNullable(infos.get(name));
+    }
+
+    /**
      * This method determines whether a given player already has a PlayerInfo
      * assigned, but does not actually create one.
      *
      * @param player The player to check.
      * @return True if the player has an PlayerInfo assigned.
      */
-    public boolean isKnown(Player player) {
+    public boolean isKnown(OfflinePlayer player) {
         return infos.containsKey(player.getName());
     }
 
