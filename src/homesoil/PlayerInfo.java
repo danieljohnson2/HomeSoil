@@ -66,6 +66,8 @@ public final class PlayerInfo implements MapFileMap.Storable {
                 airCount++;
             } else if (airCount >= 2 && !bl.isLiquid()) {
                 return Optional.of(new Location(world, blockX, y + 1, blockZ));
+            } else {
+                airCount = 0;
             }
         }
 
@@ -78,6 +80,8 @@ public final class PlayerInfo implements MapFileMap.Storable {
                 airCount++;
             } else if (airCount >= 2 && !bl.isLiquid()) {
                 return Optional.of(new Location(world, blockX, y - 2, blockZ));
+            } else {
+                airCount = 0;
             }
         }
 
