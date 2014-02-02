@@ -108,7 +108,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (player != null) {
                     Optional<Location> spawn = playerInfos.getPlayerStartIfKnown(player, getServer());
 
-                    if (info.isPresent()) {
+                    if (spawn.isPresent()) {
+                        Location destination = spawn.get().clone();
+                        destination.setY(projectile.getLocation().getY());
+
                         // if a player throws a snowball named after a player, we
                         // change its effect. Since the snowball itself is gone, and the
                         // snowball-projectile is a different thing with no special name,
@@ -118,46 +121,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         // the mechanism works on the throw, not the hit (which can
                         // operate normally)
 
-                        // if a player throws a snowball named after a player, we
-                        // change the movement of the snowball so it slowly heads over
-                        // to the named player's home soil.
                         ProjectileDirector.begin(projectile, destination, 0.25, this);
                     }
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onProjectileHit(ProjectileHitEvent e) {
-        Projectile projectile = e.getEntity();
-
-        if (projectile.getType() == EntityType.SNOWBALL) {
-            LivingEntity shooter = projectile.getShooter();
-
-            // there should be only one metadata "HS_PlayerInfo", but
-            // whatever; we'll take the first that works.
-            List<MetadataValue> meta = projectile.getMetadata("HS_PlayerInfo");
-
-            for (MetadataValue m : meta) {
-                PlayerInfo info = (PlayerInfo) m.value();
-
-                Optional<Location> spawn = info.findPlayerStart(getServer());
-
-                if (spawn.isPresent()) {
-                    // If we find player info stashed, that means we
-                    // override the teleporation and land the player
-                    // in the designated player's chunk.
-
-                    //Not sure this event handler is necessary: to my knowledge
-                    //there is never a need to do anything with the snowball hit.
-                    //It is the throw event that triggers different behaviors, but
-                    //when it hits it always just goes 'paf' and is gone.
-                    //Therefore we don't need onProjectileHit to be overriden,
-                    //unless we are testing by giving it temporary ender pearl behaviors?
-                                       
-                    shooter.teleport(spawn.get());
-                    break;
                 }
             }
         }
