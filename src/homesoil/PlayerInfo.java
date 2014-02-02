@@ -56,7 +56,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
         int blockX = pos.x * 16 + 8;
         int blockZ = pos.z * 16 + 8;
 
-        final int startY = 100;
+        final int startY = 253;
         int airCount = 0;
         
         //wondering if we can trust this to always be higher than land, esp. in
@@ -73,21 +73,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
             } else if (airCount >= 2 && !bl.isLiquid()) {
                 return Optional.of(new Location(world, blockX, y + 1, blockZ));
             } else {
-                airCount = 0;
-            }
-        }
-
-        airCount = 0;
-
-        for (int y = startY - 2; y < 255; ++y) {
-            Block bl = world.getBlockAt(blockX, y, blockZ);
-
-            if (bl.getType() == Material.AIR) {
-                airCount++;
-            } else if (airCount >= 2 && !bl.isLiquid()) {
-                return Optional.of(new Location(world, blockX, y - 2, blockZ));
-            } else {
-                airCount = 0;
+                break;
             }
         }
 
