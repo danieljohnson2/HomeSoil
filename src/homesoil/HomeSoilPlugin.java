@@ -15,10 +15,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.*;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 // TODO: do not regenerate the nether or the end!
 // TODO: snowball for each player
-// TODO: snowball leads (not teleports) to player home chunk
 // TODO: players can take over other players chunks
 /**
  * This is the plugin class itself, which acts as the main entry point for a
@@ -105,44 +106,17 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 OfflinePlayer player = getServer().getOfflinePlayer(displayName);
 
                 if (player != null) {
-                    Optional<PlayerInfo> info = playerInfos.getIfKnown(player);
+                    Optional<Location> spawn = playerInfos.getPlayerStartIfKnown(player, getServer());
 
-                    if (info.isPresent()) {
-                        // if a player throws a snowball named after a playuer, we
-                        // change its effect. Since the smowball itself is gone, and the
-                        // snowball-projectile is a different thing with no special name,
-                        // we'll stash the player info in it.
+                    if (spawn.isPresent()) {
+                        Location destination = spawn.get().clone();
+                        destination.setY(projectile.getLocation().getY());
 
-                        projectile.setMetadata("HS_PlayerInfo", new FixedMetadataValue(this, info.get()));
+                        // if a player throws a snowball named after a player, we
+                        // change the movement of the snowball so it slowly heads over
+                        // to the named player's home soil.
+                        ProjectileDirector.begin(projectile, destination, 0.25, this);
                     }
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onProjectileHit(ProjectileHitEvent e) {
-        Projectile projectile = e.getEntity();
-
-        if (projectile.getType() == EntityType.SNOWBALL) {
-            LivingEntity shooter = projectile.getShooter();
-
-            // there should be only one metadata "HS_PlayerInfo", but
-            // whatever; we'll take the first that works.
-            List<MetadataValue> meta = projectile.getMetadata("HS_PlayerInfo");
-
-            for (MetadataValue m : meta) {
-                PlayerInfo info = (PlayerInfo) m.value();
-
-                Optional<Location> spawn = info.findPlayerStart(getServer());
-
-                if (spawn.isPresent()) {
-                    // If we find plauyer info stashed, that means we
-                    // override the teleporation and land the player
-                    // int the designated player's chunk.
-
-                    shooter.teleport(spawn.get());
-                    break;
                 }
             }
         }

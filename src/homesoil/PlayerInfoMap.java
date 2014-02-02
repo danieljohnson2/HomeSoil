@@ -102,6 +102,25 @@ public class PlayerInfoMap {
     }
 
     /**
+     * This method retrieves the location where the player indicated should
+     * spawn, if that player is known to us.
+     *
+     * @param player The player whose start position is needed.
+     * @param server The server where the player will be.
+     * @return The spawn location, or absent() if the player is unknown or his
+     * start location is not valid.
+     */
+    public Optional<Location> getPlayerStartIfKnown(OfflinePlayer player, Server server) {
+        Optional<PlayerInfo> info = getIfKnown(player);
+
+        if (info.isPresent()) {
+            return info.get().findPlayerStart(server);
+        } else {
+            return Optional.absent();
+        }
+    }
+
+    /**
      * This method picks a position for a player that is not assigned to any
      * player yet.
      *
