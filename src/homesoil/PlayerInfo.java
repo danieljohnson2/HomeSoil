@@ -58,6 +58,12 @@ public final class PlayerInfo implements MapFileMap.Storable {
 
         final int startY = 100;
         int airCount = 0;
+        
+        //wondering if we can trust this to always be higher than land, esp. in
+        //amplified terrain. I've seen lots of 1.7 terrain far higher than this
+        //and of course amplified can go higher still, and have multiple
+        //airspaces above ground.
+        //If we're using this for snowball targets, higher is better - chris
 
         for (int y = startY; y > 1; --y) {
             Block bl = world.getBlockAt(blockX, y, blockZ);
