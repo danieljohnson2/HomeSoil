@@ -17,8 +17,8 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.*;
 
 // TODO: do not regenerate the nether or the end!
-// TODO: ender pearl (or something) for each player
-// TODO: ender pearl leads (or teleports) to player home chunk
+// TODO: snowball for each player
+// TODO: snowball leads (not teleports) to player home chunk
 // TODO: players can take over other players chunks
 /**
  * This is the plugin class itself, which acts as the main entry point for a
@@ -98,7 +98,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         Projectile projectile = e.getEntity();
         ItemStack held = projectile.getShooter().getEquipment().getItemInHand();
 
-        if (held != null && held.getType() == Material.ENDER_PEARL) {
+        if (held != null && held.getType() == Material.SNOW_BALL) {
             ItemMeta itemMeta = held.getItemMeta();
             if (itemMeta.hasDisplayName()) {
                 String displayName = held.getItemMeta().getDisplayName();
@@ -108,9 +108,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     Optional<PlayerInfo> info = playerInfos.getIfKnown(player);
 
                     if (info.isPresent()) {
-                        // if a player throws an Ender Pearl named after a playuer, we
-                        // change its effect. Since the pearl itself is gone, and the
-                        // pearl-projectile is a different thing with no special name,
+                        // if a player throws a snowball named after a playuer, we
+                        // change its effect. Since the smowball itself is gone, and the
+                        // snowball-projectile is a different thing with no special name,
                         // we'll stash the player info in it.
 
                         projectile.setMetadata("HS_PlayerInfo", new FixedMetadataValue(this, info.get()));
@@ -124,7 +124,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     public void onProjectileHit(ProjectileHitEvent e) {
         Projectile projectile = e.getEntity();
 
-        if (projectile.getType() == EntityType.ENDER_PEARL) {
+        if (projectile.getType() == EntityType.SNOWBALL) {
             LivingEntity shooter = projectile.getShooter();
 
             // there should be only one metadata "HS_PlayerInfo", but
