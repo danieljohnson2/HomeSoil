@@ -108,10 +108,14 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     Optional<PlayerInfo> info = playerInfos.getIfKnown(player);
 
                     if (info.isPresent()) {
-                        // if a player throws a snowball named after a playuer, we
-                        // change its effect. Since the smowball itself is gone, and the
+                        // if a player throws a snowball named after a player, we
+                        // change its effect. Since the snowball itself is gone, and the
                         // snowball-projectile is a different thing with no special name,
                         // we'll stash the player info in it.
+                        
+                        // This is also where we reassign home chunks if needed:
+                        // the mechanism works on the throw, not the hit (which can
+                        // operate normally)
 
                         projectile.setMetadata("HS_PlayerInfo", new FixedMetadataValue(this, info.get()));
                     }
@@ -137,10 +141,17 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 Optional<Location> spawn = info.findPlayerStart(getServer());
 
                 if (spawn.isPresent()) {
-                    // If we find plauyer info stashed, that means we
+                    // If we find player info stashed, that means we
                     // override the teleporation and land the player
-                    // int the designated player's chunk.
+                    // in the designated player's chunk.
 
+                    //Not sure this event handler is necessary: to my knowledge
+                    //there is never a need to do anything with the snowball hit.
+                    //It is the throw event that triggers different behaviors, but
+                    //when it hits it always just goes 'paf' and is gone.
+                    //Therefore we don't need onProjectileHit to be overriden,
+                    //unless we are testing by giving it temporary ender pearl behaviors?
+                                       
                     shooter.teleport(spawn.get());
                     break;
                 }
@@ -194,5 +205,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 e.getPlayer().chat("You have exited your home chunk");
             }
         }
-    }
+    } //we are going to want to remove this in final build entirely:
+    //I'd prefer not overriding something so fundamental to play.
+    //However, it's got a job to do now - chris
 }
