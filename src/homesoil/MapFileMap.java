@@ -147,7 +147,7 @@ public final class MapFileMap extends HashMap<String, Object> {
      * @param <T> The type of the value to return.
      * @param valueClass The type of the value to return, again.
      * @return The value for the key.
-     * @throws IllegalArgumentException If the key is not found.
+     * @throws IllegalArgumentException if the key is not found.
      */
     public <T extends Storable> T getValue(String key, Class<T> valueClass) {
         Object value = get(key);
@@ -178,7 +178,7 @@ public final class MapFileMap extends HashMap<String, Object> {
      * @param <T> The type of the value to extract.
      * @param destination The map to be populated with keys and values.
      * @param valueClass The type of the value to extract, again.
-     * @throws IllegalArgumentException If the key is not found.
+     * @throws IllegalArgumentException if the key is not found.
      */
     public <T extends Storable> void copyInto(Map<? super String, ? super T> destination, Class<T> valueClass) {
         for (String key : keySet()) {
