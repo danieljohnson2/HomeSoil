@@ -63,7 +63,6 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
 
         Vector vec = projectile.getVelocity().clone();
         Location loc = projectile.getLocation();
-        projectile.teleport(new Location(projectile.getWorld(), loc.getX(), loc.getY(), loc.getZ()));
 
         double dx = destination.getX() - loc.getX();
         double dy = destination.getY() - loc.getY();
