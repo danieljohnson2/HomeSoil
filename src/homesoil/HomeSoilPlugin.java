@@ -110,18 +110,17 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
                     if (spawn.isPresent()) {
                         Location destination = spawn.get().clone();
-                        destination.setY(projectile.getLocation().getY());
-
                         // if a player throws a snowball named after a player, we
                         // change its effect. Since the snowball itself is gone, and the
                         // snowball-projectile is a different thing with no special name,
                         // we'll stash the player info in it.
-                        
+
                         // This is also where we reassign home chunks if needed:
                         // the mechanism works on the throw, not the hit (which can
                         // operate normally)
 
-                        ProjectileDirector.begin(projectile, destination, 0.25, this);
+                        ProjectileDirector.begin(projectile, destination, this);
+                        //ProjectileDirector now handles its own speed as it varies w. distance
                     }
                 }
             }

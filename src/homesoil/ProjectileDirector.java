@@ -32,63 +32,76 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
 
     private final Projectile projectile;
     private final Location destination;
-    private final double speed;
 
-    private ProjectileDirector(Projectile projectile, Location destination, double speed) {
+    private ProjectileDirector(Projectile projectile, Location destination) {
         this.projectile = Preconditions.checkNotNull(projectile);
         this.destination = Preconditions.checkNotNull(destination);
-        this.speed = speed;
     }
 
     /**
      * This method starts up a directory to manage the projectile and send it to
      * the destination indicated.
      *
-     * @param projectile The projectil to guide.
+     * @param projectile The projectile to guide.
      * @param destination The place to send the projectile.
-     * @param speed The speed (in blocks per tick, I think).
      * @param plugin Our plugin. There can be only one, probably.
      */
-    public static void begin(Projectile projectile, Location destination, double speed, Plugin plugin) {
-        ProjectileDirector director = new ProjectileDirector(projectile, destination, speed);
+    public static void begin(Projectile projectile, Location destination, Plugin plugin) {
+        ProjectileDirector director = new ProjectileDirector(projectile, destination);
         plugin.getServer().getPluginManager().registerEvents(director, plugin);
         director.runTaskTimer(plugin, 1, 1);
     }
 
     @Override
     public void run() {
-        // if the projectile has been removed from the game,
-        // we'll give up on it.
-
         if (!projectile.isValid() || projectile.isDead()) {
             cancel();
             return;
         }
+        // if the projectile has been removed from the game,
+        // we'll give up on it.
 
         Vector vec = projectile.getVelocity().clone();
         Location loc = projectile.getLocation();
-        vec.setY(0);
-        projectile.teleport(new Location(projectile.getWorld(), loc.getX(), destination.getY(), loc.getZ()));
+        projectile.teleport(new Location(projectile.getWorld(), loc.getX(), loc.getY(), loc.getZ()));
 
         double dx = destination.getX() - loc.getX();
+        double dy = destination.getY() - loc.getY();
         double dz = destination.getZ() - loc.getZ();
 
         // If the projectile is close enough to the destination,
         // we'll give up on it.
-        if (abs(dx) < speed && abs(dz) < speed) {
+
+        double dlength = sqrt((dx * dx) + (dy * dy) + (dz * dz));
+        if (dlength < 8) { //we have this distance number, so we'll use that
+            //we're ditching the snowball at 8 as it slows down the closer you get
+            //spent some time trying to spawn a firework here, no dice
             cancel();
             return;
         }
 
-        dx = max(-speed, dx);
-        dx = min(speed, dx);
-        vec.setX(dx);
+        double dfast = sqrt(dlength) / 100;
+        //speed is an indicator of how far you are. We tweak that here, not when calling it
+        //apparently Java's sqrt is already competitive with gamer inverse sqrt
 
-        dz = max(-speed, dz);
-        dz = min(speed, dz);
+        dx = dx / dlength;
+        dy = dy / dlength;
+        dz = dz / dlength;
+        //just make it scaled to length of 'one'
+
+        dx = dx * dfast;
+        dy = dy * dfast;
+        dz = dz * dfast;
+        //restore velocity after normalizing
+
+        vec.setX(dx);
+        vec.setY(dy);
         vec.setZ(dz);
 
         projectile.setVelocity(vec);
+        projectile.setFireTicks(100);
+        //if they are the seeking snowballs, they are on fire
+        //because why not? Easier to see, too
     }
 
     @EventHandler
