@@ -5,16 +5,19 @@
  */
 package homesoil;
 
+import static java.lang.Math.*;
+
 import com.google.common.base.*;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
-import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.*;
-import org.bukkit.util.Vector;
+import org.bukkit.inventory.meta.*;
 
-import static java.lang.Math.*;
+import org.bukkit.util.Vector;
+import org.bukkit.FireworkEffect.Type;
 
 /**
  * This class runs 'in the background' and updates the velocity of a projectile
@@ -70,9 +73,30 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
 
         // If the projectile is close enough to the destination,
         // we'll give up on it.
-
         double dlength = sqrt((dx * dx) + (dy * dy) + (dz * dz));
         if (dlength < 8) { //we have this distance number, so we'll use that
+
+            // make something cool happen when the end is reached; visible from 128 blocks away.
+            // This is just a burst of fire
+            projectile.getWorld().playEffect(loc, Effect.MOBSPAWNER_FLAMES, null, 128);
+
+            // but let's launch a firework too!
+            // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
+            // but we can ask Java to override. This is checked: an error occurs if it's not
+            // a firework.
+            Firework firework = (Firework) projectile.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+            FireworkMeta meta = firework.getFireworkMeta().clone();
+
+            // Make it fancy! This is a 'fluent' style class, where we chain method
+            // calls with '.'.
+            FireworkEffect effect = FireworkEffect.builder().
+                    withColor(Color.LIME).
+                    with(Type.BALL_LARGE).
+                    build();
+            meta.addEffect(effect);
+            meta.setPower(2);
+            firework.setFireworkMeta(meta);
+
             //we're ditching the snowball at 8 as it slows down the closer you get
             //spent some time trying to spawn a firework here, no dice
             cancel();
