@@ -120,6 +120,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         // operate normally)
 
                         ProjectileDirector.begin(projectile, destination, this);
+                        //note: beginning the snowball at destination.y + 1 would be good,
+                        //not sure on the specifics of how that's done
                         //ProjectileDirector now handles its own speed as it varies w. distance
                     }
                 }

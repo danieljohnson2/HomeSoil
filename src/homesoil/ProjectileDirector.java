@@ -68,16 +68,16 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
         Location loc = projectile.getLocation();
 
         double dx = destination.getX() - loc.getX();
-        double dy = destination.getY() - loc.getY();
+        double dy = (destination.getY()+2) - loc.getY(); //target two blocks off the ground: head height!
         double dz = destination.getZ() - loc.getZ();
 
         // If the projectile is close enough to the destination,
         // we'll give up on it.
         double dlength = sqrt((dx * dx) + (dy * dy) + (dz * dz));
         if (dlength < 8) { //we have this distance number, so we'll use that
-
+            //we're ditching the snowball at 8 as it slows down the closer you get
             // make something cool happen when the end is reached; visible from 128 blocks away.
-            // This is just a burst of fire
+            // This is just a burst of fire (goes with the fireticks effect, good)
             projectile.getWorld().playEffect(loc, Effect.MOBSPAWNER_FLAMES, null, 128);
 
             // but let's launch a firework too!
@@ -96,9 +96,11 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
             meta.addEffect(effect);
             meta.setPower(2);
             firework.setFireworkMeta(meta);
-
-            //we're ditching the snowball at 8 as it slows down the closer you get
-            //spent some time trying to spawn a firework here, no dice
+            
+            //If possible I would like to have just the burst at ground level (perhaps combined with
+            //the flames effect, perhaps instead of) but I admit the firework is cool :)
+            //You can launch tons of them by firing normal snowballs inside your home chunk
+            
             cancel();
             return;
         }
