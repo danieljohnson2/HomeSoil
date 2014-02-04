@@ -43,7 +43,10 @@ public class PlayerInfoMap {
             for (int limit = 0; limit < 256; ++limit) {
                 info.setHomeChunk(getInitialChunkPosition(world));
 
-                if (info.findPlayerStart(server).isPresent()) {
+                // after a while, we'll take what we can get!
+                boolean picky = limit < 128;
+
+                if (info.findPlayerStart(server, picky).isPresent()) {
                     break;
                 }
             }
@@ -103,7 +106,8 @@ public class PlayerInfoMap {
 
     /**
      * This method retrieves the location where the player indicated should
-     * spawn, if that player is known to us.
+     * spawn, if that player is known to us. This will not initialize the player
+     * data or pick a spawn point.
      *
      * @param player The player whose start position is needed.
      * @param server The server where the player will be.
@@ -114,7 +118,7 @@ public class PlayerInfoMap {
         Optional<PlayerInfo> info = getIfKnown(player);
 
         if (info.isPresent()) {
-            return info.get().findPlayerStart(server);
+            return info.get().findPlayerStart(server, false);
         } else {
             return Optional.absent();
         }

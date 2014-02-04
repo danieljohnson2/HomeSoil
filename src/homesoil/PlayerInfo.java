@@ -47,31 +47,45 @@ public final class PlayerInfo implements MapFileMap.Storable {
      * blocks on top.
      *
      * @param server The server in which the player will spawn.
+     * @param picky The method fails if the player would be spawned in water or
+     * lava.
      * @return The location to spawn him; absent if no suitable location could
      * be found.
      */
-    public Optional<Location> findPlayerStart(Server server) {
+    public Optional<Location> findPlayerStart(Server server, boolean picky) {
         ChunkPosition pos = getHomeChunk();
         World world = pos.getWorld(server);
         int blockX = pos.x * 16 + 8;
         int blockZ = pos.z * 16 + 8;
 
         final int startY = 253;
-        int airCount = 0;
         
+        // we spawn the player a bit in the air, since he falls a bit
+        // while the world is loading. We need enough air for him to fall
+        // through. 5 is as much as we can have without damaging the player on
+        // landing.
+               
+        final int spawnHover = 4;
+        final int spawnSpaceNeeded = spawnHover + 1;
+        
+        int airCount = 0;
+
         //wondering if we can trust this to always be higher than land, esp. in
         //amplified terrain. I've seen lots of 1.7 terrain far higher than this
         //and of course amplified can go higher still, and have multiple
         //airspaces above ground.
         //If we're using this for snowball targets, higher is better - chris
-
         for (int y = startY; y > 1; --y) {
             Block bl = world.getBlockAt(blockX, y, blockZ);
 
             if (bl.getType() == Material.AIR) {
                 airCount++;
-            } else if (airCount >= 2 && !bl.isLiquid()) {
-                return Optional.of(new Location(world, blockX, y + 1, blockZ));
+            } else if (airCount >= spawnSpaceNeeded) {
+                if (picky && bl.isLiquid()) {
+                    break;
+                }
+
+                return Optional.of(new Location(world, blockX, y + spawnHover, blockZ));
             } else {
                 break;
             }

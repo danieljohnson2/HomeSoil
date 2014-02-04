@@ -118,7 +118,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         // This is also where we reassign home chunks if needed:
                         // the mechanism works on the throw, not the hit (which can
                         // operate normally)
-
                         ProjectileDirector.begin(projectile, destination, this);
                         //note: beginning the snowball at destination.y + 1 would be good,
                         //not sure on the specifics of how that's done
@@ -131,12 +130,19 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
-        if (!playerInfos.isKnown(e.getPlayer())) {
-            PlayerInfo info = playerInfos.get(e.getPlayer());
-            Optional<Location> spawn = info.findPlayerStart(getServer());
+        Player player = e.getPlayer();
+
+        if (!playerInfos.isKnown(player)) {
+            PlayerInfo info = playerInfos.get(player);
+            Optional<Location> spawn = info.findPlayerStart(getServer(), false);
 
             if (spawn.isPresent()) {
-                e.getPlayer().teleport(spawn.get());
+                player.teleport(spawn.get());
+                getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
+                        player.getName(), info.getHomeChunk()));
+            } else {
+                getLogger().warning(String.format("'%s' joined the game, but no home chunk could be found!",
+                        player.getName()));
             }
 
             saveIfNeeded();
@@ -146,7 +152,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         PlayerInfo info = playerInfos.get(e.getPlayer());
-        Optional<Location> spawn = info.findPlayerStart(getServer());
+        Optional<Location> spawn = info.findPlayerStart(getServer(), false);
 
         if (spawn.isPresent()) {
             e.setRespawnLocation(spawn.get());
@@ -162,6 +168,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
+        //we are going to want to remove this in final build entirely:
+        //I'd prefer not overriding something so fundamental to play.
+        //However, it's got a job to do now - chris
+
         PlayerInfo info = playerInfos.get(e.getPlayer());
         ChunkPosition home = info.getHomeChunk();
 
@@ -175,7 +185,5 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 e.getPlayer().chat("You have exited your home chunk");
             }
         }
-    } //we are going to want to remove this in final build entirely:
-    //I'd prefer not overriding something so fundamental to play.
-    //However, it's got a job to do now - chris
+    }
 }
