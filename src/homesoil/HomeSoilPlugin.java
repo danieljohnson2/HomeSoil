@@ -123,6 +123,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         //not sure on the specifics of how that's done
                         //ProjectileDirector now handles its own speed as it varies w. distance
                     }
+
+                    saveIfNeeded();
                 }
             }
         }
@@ -133,17 +135,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         Player player = e.getPlayer();
 
         if (!playerInfos.isKnown(player)) {
-            PlayerInfo info = playerInfos.get(player);
-            Optional<Location> spawn = info.findPlayerStart(getServer(), false);
+            player.teleport(playerInfos.getPlayerStart(player));
 
-            if (spawn.isPresent()) {
-                player.teleport(spawn.get());
-                getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
-                        player.getName(), info.getHomeChunk()));
-            } else {
-                getLogger().warning(String.format("'%s' joined the game, but no home chunk could be found!",
-                        player.getName()));
-            }
+            getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
+                    player.getName(), playerInfos.getHomeChunk(player)));
 
             saveIfNeeded();
         }
@@ -151,12 +146,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
-        PlayerInfo info = playerInfos.get(e.getPlayer());
-        Optional<Location> spawn = info.findPlayerStart(getServer(), false);
-
-        if (spawn.isPresent()) {
-            e.setRespawnLocation(spawn.get());
-        }
+        e.setRespawnLocation(playerInfos.getPlayerStart(e.getPlayer()));
     }
 
     @EventHandler
@@ -172,8 +162,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         //I'd prefer not overriding something so fundamental to play.
         //However, it's got a job to do now - chris
 
-        PlayerInfo info = playerInfos.get(e.getPlayer());
-        ChunkPosition home = info.getHomeChunk();
+        ChunkPosition home = playerInfos.getHomeChunk(e.getPlayer());
 
         boolean wasHome = home.contains(e.getFrom());
         boolean isHome = home.contains(e.getTo());

@@ -23,9 +23,9 @@ public class PlayerInfoMap {
 
     /**
      * This method returns the player info object for a player. If there is
-     * none, we create it, and immediately save it.
+     * none, we create it and assign a home chunk.
      *
-     * @param player
+     * @param player The player whose info is wanted.
      * @return The info object with the player's data.
      */
     public PlayerInfo get(Player player) {
@@ -35,22 +35,7 @@ public class PlayerInfoMap {
 
         if (info == null) {
             info = new PlayerInfo();
-            World world = player.getWorld();
-            Server server = player.getServer();
-
-            // we'll try many times to find a spawn location
-            // with a valid player start.
-            for (int limit = 0; limit < 256; ++limit) {
-                info.setHomeChunk(getInitialChunkPosition(world));
-
-                // after a while, we'll take what we can get!
-                boolean picky = limit < 128;
-
-                if (info.findPlayerStart(server, picky).isPresent()) {
-                    break;
-                }
-            }
-
+            pickNewHomeChunk(player.getWorld(), player.getServer(), info);
             infos.put(name, info);
         }
 
@@ -59,7 +44,7 @@ public class PlayerInfoMap {
 
     /**
      * This method retrieves the player info for a player who may be offline; we
-     * cannot generate the player info if the player is offline. This method
+     * do not generate the player info if the player is offline. This method
      * will return it if we have it, and return absent if not.
      *
      * @param player The player whose info is needed.
@@ -83,10 +68,10 @@ public class PlayerInfoMap {
 
     /**
      * This method returns a set containing each chunk that is the home for any
-     * player. The set is immutable and lazy allocated.
+     * player. The set is immutable and lazy allocated; a new one is allocated
+     * if the player infos are ever changed.
      *
-     * @param position The position to check.
-     * @return True if the chunk is anyone's home chunk.
+     * @return An immutable set of chunks that are occupied by a player..
      */
     public Set<ChunkPosition> getHomeChunks() {
         int currentGenCount = PlayerInfo.getGenerationCount();
@@ -104,24 +89,100 @@ public class PlayerInfoMap {
         return homeChunks;
     }
 
+    ////////////////////////////////
+    // Player Starts
+    //
+    /**
+     * This method returns the position of the player's home chunk, allocating
+     * it if necessary.
+     *
+     * @param player The player whose home is needed.
+     * @return The position of the player's home chunk.
+     */
+    public ChunkPosition getHomeChunk(Player player) {
+        return get(player).getHomeChunk();
+    }
+
+    /**
+     * This method returns the location to spawn a player. If the player cannot
+     * be spawned in his home chunk, this will assign a new home chunk in the
+     * same world for that player.
+     *
+     * @param player The player whose spawn point is needed.
+     * @return The location to spawn him.
+     */
+    public Location getPlayerStart(Player player) {
+        return getPlayerStartCore(get(player), player.getServer());
+    }
+
     /**
      * This method retrieves the location where the player indicated should
-     * spawn, if that player is known to us. This will not initialize the player
-     * data or pick a spawn point.
+     * spawn, if that player is known to us. If not, this returns absent.
+     *
+     * This will reassign the player's home chunk if required to find a valid
+     * spawn point, and will fail only if the player is not known to us.
      *
      * @param player The player whose start position is needed.
      * @param server The server where the player will be.
-     * @return The spawn location, or absent() if the player is unknown or his
-     * start location is not valid.
+     * @return The spawn location, or absent() if the player is unknown.
      */
     public Optional<Location> getPlayerStartIfKnown(OfflinePlayer player, Server server) {
         Optional<PlayerInfo> info = getIfKnown(player);
 
         if (info.isPresent()) {
-            return info.get().findPlayerStart(server, false);
+            return Optional.of(getPlayerStartCore(info.get(), server));
         } else {
             return Optional.absent();
         }
+    }
+
+    /**
+     * This method is the core implementation for the getPlayerStart methods; it
+     * returns the player's spawn point but allocates a new home chunk if the
+     * current home is not valid; if this fails it merely throws an exception.
+     *
+     * @param player The player whose spawn point is needed.
+     * @param info The player's info object.
+     * @param server The server on which to find a new home chunk (if needed)
+     * @return The location to spawn.
+     */
+    private Location getPlayerStartCore(PlayerInfo info, Server server) {
+        Optional<Location> spawn = info.findPlayerStart(server, true);
+
+        if (spawn.isPresent()) {
+            return spawn.get();
+        } else {
+            World world = info.getHomeChunk().getWorld(server);
+            return pickNewHomeChunk(world, server, info);
+        }
+    }
+
+    /**
+     * This method selects a home chunk and assigns it to the 'info' given; it
+     * keeps trying to do this until it finds a valid home chunk. If it cannot
+     * find one, it will throw an exception.
+     *
+     * @param world The world in which the home chunk should be found.
+     * @param server The server that contains the world.
+     * @param info The player info to be updated.
+     * @return The spawn point for the player, as a convenience.
+     */
+    private Location pickNewHomeChunk(World world, Server server, PlayerInfo info) {
+        // we'll try many times to find a spawn location
+        // with a valid player start.
+        for (int limit = 0; limit < 256; ++limit) {
+            info.setHomeChunk(getInitialChunkPosition(world));
+
+            // after a while, we'll take what we can get!
+            boolean picky = limit < 128;
+
+            Optional<Location> spawn = info.findPlayerStart(server, picky);
+            if (spawn.isPresent()) {
+                return spawn.get();
+            }
+        }
+
+        throw new RuntimeException(String.format("Unable to find any open home chunk in the world '%s'", world.getName()));
     }
 
     /**
