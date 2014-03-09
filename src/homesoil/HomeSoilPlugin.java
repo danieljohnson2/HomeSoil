@@ -134,6 +134,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         Optional<Location> victimSpawn = playerInfos.getPlayerStartIfKnown(victim, getServer());
         
         if (victimSpawn.isPresent()) {
+            Location start = projectile.getLocation().clone();
+            start.add(0, 1, 0);
+            projectile.teleport(start);
+            
             Location destination = victimSpawn.get().clone();
             
             // if a player throws a snowball named after a player, we
