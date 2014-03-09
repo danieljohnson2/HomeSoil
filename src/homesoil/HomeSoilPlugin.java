@@ -28,7 +28,7 @@ import org.bukkit.util.Vector;
  * @author DanJ
  */
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
-
+    
     private static final File playersFile = new File("HomeSoil.txt");
     private final Set<ChunkPosition> alreadyLoadedOnce = Sets.newHashSet();
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
@@ -38,7 +38,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void load() {
         getLogger().info("Loading HomeSoil State");
-
+        
         if (playersFile.exists()) {
             playerInfos.load(playersFile);
         }
@@ -67,7 +67,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void regenerateIfNeeded(Chunk chunk) {
         ChunkPosition pos = ChunkPosition.of(chunk);
-
+        
         if (alreadyLoadedOnce.add(pos)) {
             if (playerInfos.getHomeChunks().contains(pos)) {
                 getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
@@ -82,90 +82,101 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         super.onEnable();
-
+        
         load();
         getServer().getPluginManager().registerEvents(this, this);
     }
-
+    
     @Override
     public void onDisable() {
         saveIfNeeded();
-
+        
         super.onDisable();
     }
-
+    
     @EventHandler
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
         Projectile projectile = e.getEntity();
-        ItemStack held = projectile.getShooter().getEquipment().getItemInHand();
-
-        if (held != null && held.getType() == Material.SNOW_BALL) {
-            ItemMeta itemMeta = held.getItemMeta();
-            if (itemMeta.hasDisplayName()) {
-                String displayName = held.getItemMeta().getDisplayName();
-                OfflinePlayer snowballPlayer = getServer().getOfflinePlayer(displayName);
-
-                if (snowballPlayer != null) {
-                    if (snowballPlayer.getPlayer() == projectile.getShooter()) {
-                        ChunkPosition home = playerInfos.getHomeChunk(snowballPlayer.getPlayer());
-                        boolean isHome = home.contains(projectile.getLocation());
-
-                        if (isHome) {
-                            playerInfos.resetHomeChunk(snowballPlayer.getPlayer());
-                        }
+        LivingEntity shooter = projectile.getShooter();
+        if (shooter instanceof Player) {
+            ItemStack held = shooter.getEquipment().getItemInHand();
+            
+            if (held != null && held.getType() == Material.SNOW_BALL) {
+                ItemMeta itemMeta = held.getItemMeta();
+                if (itemMeta.hasDisplayName()) {
+                    String displayName = held.getItemMeta().getDisplayName();
+                    OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
+                    
+                    if (victimPlayer != null) {
+                        tryToStealHomeChunk((Player) shooter, victimPlayer);
+                        directFlamingSnowball(projectile, victimPlayer);
+                        saveIfNeeded();
                     }
-
-                    Optional<Location> spawn = playerInfos.getPlayerStartIfKnown(snowballPlayer, getServer());
-
-                    if (spawn.isPresent()) {
-                        Location destination = spawn.get().clone();
-                        // if a player throws a snowball named after a player, we
-                        // change its effect. Since the snowball itself is gone, and the
-                        // snowball-projectile is a different thing with no special name,
-                        // we'll stash the player info in it.
-
-                        // This is also where we reassign home chunks if needed:
-                        // the mechanism works on the throw, not the hit (which can
-                        // operate normally)
-                        ProjectileDirector.begin(projectile, destination, this);
-                        //note: beginning the snowball at destination.y + 1 would be good,
-                        //not sure on the specifics of how that's done
-                        //ProjectileDirector now handles its own speed as it varies w. distance
-                    }
-
-
-                    saveIfNeeded();
                 }
             }
         }
     }
+    
+    private void tryToStealHomeChunk(Player shooter, OfflinePlayer victim) {
+        Optional<ChunkPosition> victimChunk = playerInfos.getHomeChunkIfKnown(victim);
+        boolean isInVictimHome = victimChunk.isPresent() && victimChunk.get().contains(shooter.getLocation());
+        
+        if (isInVictimHome) {
+            playerInfos.resetHomeChunk(victim, shooter.getWorld(), getServer());
+            if (victim.getPlayer() != shooter) {
+                PlayerInfo shooterInfo = playerInfos.get(shooter);
+                shooterInfo.setHomeChunk(victimChunk.get());
+            }
+        }
+    }
+    
+    private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
+        Optional<Location> victimSpawn = playerInfos.getPlayerStartIfKnown(victim, getServer());
+        
+        if (victimSpawn.isPresent()) {
+            Location destination = victimSpawn.get().clone();
+            
+            // if a player throws a snowball named after a player, we
+            // change its effect. Since the snowball itself is gone, and the
+            // snowball-projectile is a different thing with no special name,
+            // we'll stash the player info in it.
 
+            // This is also where we reassign home chunks if needed:
+            // the mechanism works on the throw, not the hit (which can
+            // operate normally)
+            ProjectileDirector.begin(projectile, destination, this);
+            //note: beginning the snowball at destination.y + 1 would be good,
+            //not sure on the specifics of how that's done
+            //ProjectileDirector now handles its own speed as it varies w. distance
+        }
+    }
+    
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
-
+        
         if (!playerInfos.isKnown(player)) {
             player.teleport(playerInfos.getPlayerStart(player));
-
+            
             getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
                     player.getName(), playerInfos.getHomeChunk(player)));
-
+            
             saveIfNeeded();
         }
     }
-
+    
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         e.setRespawnLocation(playerInfos.getPlayerStart(e.getPlayer()));
     }
-
+    
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
         if (!e.isNewChunk()) {
             regenerateIfNeeded(e.getChunk());
         }
     }
-
+    
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         //we are going to want to remove this in final build entirely:
@@ -173,10 +184,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         //However, it's got a job to do now - chris
 
         ChunkPosition home = playerInfos.getHomeChunk(e.getPlayer());
-
+        
         boolean wasHome = home.contains(e.getFrom());
         boolean isHome = home.contains(e.getTo());
-
+        
         if (wasHome != isHome) {
             if (isHome) {
                 e.getPlayer().chat("You have entered your home chunk");

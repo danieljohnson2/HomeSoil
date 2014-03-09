@@ -42,13 +42,13 @@ public class PlayerInfoMap {
         return info;
     }
 
-    public void resetHomeChunk(Player player) {
+    public void resetHomeChunk(OfflinePlayer player, World world, Server server) {
         String name = player.getName();
 
         PlayerInfo info = infos.get(name);
 
         if (info != null) {
-            pickNewHomeChunk(player.getWorld(), player.getServer(), info);
+            pickNewHomeChunk(world, server, info);
         }
 
     }
@@ -112,6 +112,16 @@ public class PlayerInfoMap {
      */
     public ChunkPosition getHomeChunk(Player player) {
         return get(player).getHomeChunk();
+    }
+
+    public Optional<ChunkPosition> getHomeChunkIfKnown(OfflinePlayer player) {
+        Optional<PlayerInfo> info = getIfKnown(player);
+
+        if (info.isPresent()) {
+            return Optional.of(info.get().getHomeChunk());
+        } else {
+            return Optional.absent();
+        }
     }
 
     /**
