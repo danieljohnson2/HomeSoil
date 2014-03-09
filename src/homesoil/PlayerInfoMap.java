@@ -42,6 +42,17 @@ public class PlayerInfoMap {
         return info;
     }
 
+    public void resetHomeChunk(Player player) {
+        String name = player.getName();
+
+        PlayerInfo info = infos.get(name);
+
+        if (info != null) {
+            pickNewHomeChunk(player.getWorld(), player.getServer(), info);
+        }
+
+    }
+
     /**
      * This method retrieves the player info for a player who may be offline; we
      * do not generate the player info if the player is offline. This method

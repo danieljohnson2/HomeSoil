@@ -103,10 +103,19 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             ItemMeta itemMeta = held.getItemMeta();
             if (itemMeta.hasDisplayName()) {
                 String displayName = held.getItemMeta().getDisplayName();
-                OfflinePlayer player = getServer().getOfflinePlayer(displayName);
+                OfflinePlayer snowballPlayer = getServer().getOfflinePlayer(displayName);
 
-                if (player != null) {
-                    Optional<Location> spawn = playerInfos.getPlayerStartIfKnown(player, getServer());
+                if (snowballPlayer != null) {
+                    if (snowballPlayer.getPlayer() == projectile.getShooter()) {
+                        ChunkPosition home = playerInfos.getHomeChunk(snowballPlayer.getPlayer());
+                        boolean isHome = home.contains(projectile.getLocation());
+
+                        if (isHome) {
+                            playerInfos.resetHomeChunk(snowballPlayer.getPlayer());
+                        }
+                    }
+
+                    Optional<Location> spawn = playerInfos.getPlayerStartIfKnown(snowballPlayer, getServer());
 
                     if (spawn.isPresent()) {
                         Location destination = spawn.get().clone();
@@ -123,6 +132,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         //not sure on the specifics of how that's done
                         //ProjectileDirector now handles its own speed as it varies w. distance
                     }
+
 
                     saveIfNeeded();
                 }
