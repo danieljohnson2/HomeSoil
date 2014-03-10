@@ -12,11 +12,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.world.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.*;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
 // TODO: do not regenerate the nether or the end!
 // TODO: snowball for each player
