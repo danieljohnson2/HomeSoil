@@ -49,25 +49,25 @@ public final class PlayerInfo implements MapFileMap.Storable {
      * @param server The server in which the player will spawn.
      * @param picky The method fails if the player would be spawned in water or
      * lava.
-     * @return The location to spawn him; absent if no suitable location could
-     * be found.
+     * @return The location to spawn him; null if no suitable location could be
+     * found.
      */
-    public Optional<Location> findPlayerStart(Server server, boolean picky) {
+    public Location findPlayerStartOrNull(Server server, boolean picky) {
         ChunkPosition pos = getHomeChunk();
         World world = pos.getWorld(server);
         int blockX = pos.x * 16 + 8;
         int blockZ = pos.z * 16 + 8;
 
         final int startY = 253;
-        
+
         // we spawn the player a bit in the air, since he falls a bit
         // while the world is loading. We need enough air for him to fall
         // through. 5 is as much as we can have without damaging the player on
         // landing.
-               
+
         final int spawnHover = 4;
         final int spawnSpaceNeeded = spawnHover + 1;
-        
+
         int airCount = 0;
 
         //wondering if we can trust this to always be higher than land, esp. in
@@ -85,13 +85,13 @@ public final class PlayerInfo implements MapFileMap.Storable {
                     break;
                 }
 
-                return Optional.of(new Location(world, blockX, y + spawnHover, blockZ));
+                return new Location(world, blockX, y + spawnHover, blockZ);
             } else {
                 break;
             }
         }
 
-        return Optional.absent();
+        return null;
     }
     ////////////////////////////////
     // Generation Count

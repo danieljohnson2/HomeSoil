@@ -24,7 +24,7 @@ import org.bukkit.plugin.java.*;
  * @author DanJ
  */
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
-    
+
     private static final File playersFile = new File("HomeSoil.txt");
     private final Set<ChunkPosition> alreadyLoadedOnce = Sets.newHashSet();
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
@@ -34,7 +34,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void load() {
         getLogger().info("Loading HomeSoil State");
-        
+
         if (playersFile.exists()) {
             playerInfos.load(playersFile);
         }
@@ -63,7 +63,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void regenerateIfNeeded(Chunk chunk) {
         ChunkPosition pos = ChunkPosition.of(chunk);
-        
+
         if (alreadyLoadedOnce.add(pos)) {
             if (playerInfos.getHomeChunks().contains(pos)) {
                 getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
@@ -78,31 +78,31 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         super.onEnable();
-        
+
         load();
         getServer().getPluginManager().registerEvents(this, this);
     }
-    
+
     @Override
     public void onDisable() {
         saveIfNeeded();
-        
+
         super.onDisable();
     }
-    
+
     @EventHandler
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
         Projectile projectile = e.getEntity();
         LivingEntity shooter = projectile.getShooter();
         if (shooter instanceof Player) {
             ItemStack held = shooter.getEquipment().getItemInHand();
-            
+
             if (held != null && held.getType() == Material.SNOW_BALL) {
                 ItemMeta itemMeta = held.getItemMeta();
                 if (itemMeta.hasDisplayName()) {
                     String displayName = held.getItemMeta().getDisplayName();
                     OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
-                    
+
                     if (victimPlayer != null) {
                         tryToStealHomeChunk((Player) shooter, victimPlayer);
                         directFlamingSnowball(projectile, victimPlayer);
@@ -112,30 +112,32 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             }
         }
     }
-    
+
     private void tryToStealHomeChunk(Player shooter, OfflinePlayer victim) {
-        Optional<ChunkPosition> victimChunk = playerInfos.getHomeChunkIfKnown(victim);
-        boolean isInVictimHome = victimChunk.isPresent() && victimChunk.get().contains(shooter.getLocation());
-        
-        if (isInVictimHome) {
-            playerInfos.resetHomeChunk(victim, shooter.getWorld(), getServer());
-            if (victim.getPlayer() != shooter) {
-                PlayerInfo shooterInfo = playerInfos.get(shooter);
-                shooterInfo.setHomeChunk(victimChunk.get());
+        if (playerInfos.isKnown(victim)) {
+            PlayerInfo victimInfo = playerInfos.get(victim);
+            ChunkPosition victimChunk = victimInfo.getHomeChunk();
+
+            if (victimChunk.contains(shooter.getLocation())) {
+                playerInfos.resetHomeChunk(victim, shooter.getWorld(), getServer());
+                if (victim.getPlayer() != shooter) {
+                    PlayerInfo shooterInfo = playerInfos.get(shooter);
+                    shooterInfo.setHomeChunk(victimChunk);
+                }
             }
         }
     }
-    
+
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
-        Optional<Location> victimSpawn = playerInfos.getPlayerStartIfKnown(victim, getServer());
-        
-        if (victimSpawn.isPresent()) {
+        if (playerInfos.isKnown(victim)) {
+            Location victimSpawn = playerInfos.getPlayerStart(victim, getServer());
+
             Location start = projectile.getLocation().clone();
             start.add(0, 1, 0);
             projectile.teleport(start);
-            
-            Location destination = victimSpawn.get().clone();
-            
+
+            Location destination = victimSpawn.clone();
+
             // if a player throws a snowball named after a player, we
             // change its effect. Since the snowball itself is gone, and the
             // snowball-projectile is a different thing with no special name,
@@ -150,44 +152,47 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             //ProjectileDirector now handles its own speed as it varies w. distance
         }
     }
-    
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
-        
+
         if (!playerInfos.isKnown(player)) {
             player.teleport(playerInfos.getPlayerStart(player));
-            
+            String name = player.getName();
+            ChunkPosition homeChunk = playerInfos.get(player).getHomeChunk();
+
             getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
-                    player.getName(), playerInfos.getHomeChunk(player)));
-            
+                    name,
+                    homeChunk));
+
             saveIfNeeded();
         }
     }
-    
+
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         e.setRespawnLocation(playerInfos.getPlayerStart(e.getPlayer()));
     }
-    
+
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
         if (!e.isNewChunk()) {
             regenerateIfNeeded(e.getChunk());
         }
     }
-    
+
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         //we are going to want to remove this in final build entirely:
         //I'd prefer not overriding something so fundamental to play.
         //However, it's got a job to do now - chris
 
-        ChunkPosition home = playerInfos.getHomeChunk(e.getPlayer());
-        
+        ChunkPosition home = playerInfos.get(e.getPlayer()).getHomeChunk();
+
         boolean wasHome = home.contains(e.getFrom());
         boolean isHome = home.contains(e.getTo());
-        
+
         if (wasHome != isHome) {
             if (isHome) {
                 e.getPlayer().chat("You have entered your home chunk");
