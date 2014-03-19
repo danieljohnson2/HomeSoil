@@ -33,12 +33,22 @@ public final class ChunkPosition implements MapFileMap.Storable {
     /**
      * This method returns the position of the chunk given.
      *
-     * @param chunk The chunk whose position is wnated.
+     * @param chunk The chunk whose position is wanted.
      * @return A new position object.
      */
     public static ChunkPosition of(Chunk chunk) {
         return new ChunkPosition(chunk.getX(), chunk.getZ(), chunk
                 .getWorld());
+    }
+
+    /**
+     * This method returns the chunk that contains the location given.
+     *
+     * @param location The location that identifies the chunk.
+     * @return The chunk position of the chunk that contains the location.
+     */
+    public static ChunkPosition of(Location location) {
+        return of(location.getChunk());
     }
 
     /**

@@ -119,6 +119,26 @@ public final class MapFileMap extends HashMap<String, Object> {
     }
 
     /**
+     * This method returns a value as a list; if the value is not a list, but is
+     * map, this method will try to convert it by treating the keys as indices.
+     * This method converts each element of the list as well.
+     *
+     * @param key The key of the value.
+     * @param itemClass The type of the individual elements.
+     * @return The value as a list; always a copy of the list within.
+     * @throws IllegalArgumentException If the key is not found.
+     */
+    public <T extends Storable> List<T> getList(String key, Class<T> itemClass) {
+        ArrayList<T> b = Lists.newArrayList();
+
+        for (Object item : getList(key)) {
+            b.add(convertValue(item, itemClass));
+        }
+
+        return b;
+    }
+
+    /**
      * This method returns a value from the map, just like get(), except that it
      * throws IllegalArgumentException if the key is not found.
      *
@@ -155,6 +175,19 @@ public final class MapFileMap extends HashMap<String, Object> {
             throw new IllegalArgumentException(String.format("Key '%s' is not found in map file map.", key));
         }
 
+        return convertValue(value, valueClass);
+    }
+
+    /**
+     * This method converts a value to a storable type; if necessary it will
+     * invoke the storable type's constructor.
+     *
+     * @param <T> The desired type.
+     * @param value The value to convert.
+     * @param valueClass The desired type again.
+     * @return The converted value; may be the same object as 'value'.
+     */
+    private static <T extends Storable> T convertValue(Object value, Class<T> valueClass) {
         if (valueClass.isInstance(value)) {
             return valueClass.cast(value);
         }

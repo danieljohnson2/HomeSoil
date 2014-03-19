@@ -15,29 +15,93 @@ import org.bukkit.block.*;
  */
 public final class PlayerInfo implements MapFileMap.Storable {
 
-    private ChunkPosition homeChunk = new ChunkPosition(0, 0, "world");
-
     public PlayerInfo() {
         incrementGenerationCount();
     }
+    ////////////////////////////////
+    // Home Chunks
+    private List<ChunkPosition> homeChunks = Collections.emptyList();
 
     /**
-     * This method returns the position of the home chunk of the player.
+     * This method returns an immutable list that contains each home chunk
+     * belonging to this player; this is empty only if the player info is not
+     * yet initialized, and the chunks are in the order they were acquired.
      *
-     * @return The home chunk of this player.
+     * @return The list of home chunks of the list.
      */
-    public ChunkPosition getHomeChunk() {
-        return homeChunk;
+    public List<ChunkPosition> getHomeChunks() {
+        return ImmutableList.copyOf(homeChunks);
     }
 
     /**
-     * this method updates the position of the home chunk of this player.
+     * This method assigns a single home chunk to the player; if he had any
+     * chunks, they will be removed in favor of this new one.
      *
-     * @param pos The new home chunk of this player.
+     * @param pos The new home chunk.
      */
-    public void setHomeChunk(ChunkPosition pos) {
-        homeChunk = Preconditions.checkNotNull(pos);
+    public void setHomeChunk(ChunkPosition homeChunk) {
+        homeChunks = ImmutableList.of(homeChunk);
         incrementGenerationCount();
+    }
+
+    /**
+     * This method adds a new home chunk for this player; if the chunk is
+     * already a home chunk for this player, this method does nothing. Existing
+     * home chunks remain assigned.
+     *
+     * @param homeChunk The new home chunk of this player.
+     */
+    public void addHomeChunk(ChunkPosition homeChunk) {
+        if (!homeChunks.contains(homeChunk)) {
+            homeChunks = ImmutableList.copyOf(Iterables.concat(
+                    homeChunks,
+                    ImmutableList.of(homeChunk)));
+
+            incrementGenerationCount();
+        }
+    }
+
+    /**
+     * This will remove a home chunk from the list of chunks; but it cannot
+     * remove the last chunk. If 'homeChunk' is not actually a home chunk of
+     * this player, this method does nothing but returns true since the chunk is
+     * trivially removed.
+     *
+     * @param homeChunk The chunk to remove.
+     * @return True if the chunk is no longer present; false if it was the last
+     * chunk.
+     */
+    public boolean tryRemoveHomeChunk(ChunkPosition homeChunk) {
+        if (!homeChunks.contains(homeChunk)) {
+            return true; // it was never there, good enough
+        }
+
+        if (homeChunks.size() == 1) {
+            return false; // can't remove last chunk!
+        }
+
+        ArrayList<ChunkPosition> list = Lists.newArrayList(homeChunks);
+        list.remove(homeChunk);
+        homeChunks = ImmutableList.copyOf(list);
+        incrementGenerationCount();
+        return true;
+    }
+
+    /**
+     * This method selects one of the home chunks and returns it.
+     *
+     * @param random The RNG used to pick the chunk.
+     * @return One of the home chunks.
+     * @throws IllegalStateException If there are no home chunks at all.
+     */
+    public ChunkPosition pickHomeChunk(Random random) {
+        if (homeChunks.isEmpty()) {
+            throw new IllegalStateException(
+                    "pickHomeChunks can only be used if at least one chunk is assigned tot he player.");
+        }
+
+        int index = random.nextInt(homeChunks.size());
+        return homeChunks.get(index);
     }
 
     /**
@@ -47,13 +111,14 @@ public final class PlayerInfo implements MapFileMap.Storable {
      * blocks on top.
      *
      * @param server The server in which the player will spawn.
+     * @param random The RNG used to pick the starting chunk.
      * @param picky The method fails if the player would be spawned in water or
      * lava.
      * @return The location to spawn him; null if no suitable location could be
      * found.
      */
-    public Location findPlayerStartOrNull(Server server, boolean picky) {
-        ChunkPosition pos = getHomeChunk();
+    public Location findPlayerStartOrNull(Server server, Random random, boolean picky) {
+        ChunkPosition pos = pickHomeChunk(random);
         World world = pos.getWorld(server);
         int blockX = pos.x * 16 + 8;
         int blockZ = pos.z * 16 + 8;
@@ -118,14 +183,14 @@ public final class PlayerInfo implements MapFileMap.Storable {
     ////////////////////////////////
     // MapFileMap Storage
     public PlayerInfo(MapFileMap storage) {
-        this.homeChunk = storage.getValue("home", ChunkPosition.class);
+        this.homeChunks = ImmutableList.copyOf(storage.getList("homes", ChunkPosition.class));
         incrementGenerationCount();
     }
 
     @Override
     public Map<?, ?> toMap() {
         Map<String, Object> map = Maps.newHashMap();
-        map.put("home", getHomeChunk());
+        map.put("homes", homeChunks);
         return map;
     }
 }

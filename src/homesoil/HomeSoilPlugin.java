@@ -16,7 +16,6 @@ import org.bukkit.plugin.java.*;
 
 // TODO: do not regenerate the nether or the end!
 // TODO: snowball for each player
-// TODO: players can take over other players chunks
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -113,24 +112,44 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    /**
+     * This method will try to steal the home chunk that 'shooter' is standing
+     * in from 'victim'; it does nothing if the victim does not own the chunk,
+     * which can happen because the victim is identified by the name of the
+     * snowball.
+     *
+     * @param shooter The snowball-throwing miscreant.
+     * @param victim The poor fellow named by the snowball.
+     */
     private void tryToStealHomeChunk(Player shooter, OfflinePlayer victim) {
         if (playerInfos.isKnown(victim)) {
             PlayerInfo victimInfo = playerInfos.get(victim);
-            ChunkPosition victimChunk = victimInfo.getHomeChunk();
+            ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
 
-            if (victimChunk.contains(shooter.getLocation())) {
-                playerInfos.resetHomeChunk(victim, shooter.getWorld(), getServer());
+            if (victimInfo.getHomeChunks().contains(victimChunk)) {
+                playerInfos.removeHomeChunk(victim, victimChunk, getServer());
+
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
-                    shooterInfo.setHomeChunk(victimChunk);
+                    shooterInfo.addHomeChunk(victimChunk);
                 }
             }
         }
     }
 
+    /**
+     * This method creates a scheduled task that manipulates the projectile
+     * given so that it flies towards the player start of the indicated victim.
+     *
+     * @param projectile The snowball.
+     * @param victim The guy whose name is on the snowball.
+     */
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
         if (playerInfos.isKnown(victim)) {
-            Location victimSpawn = playerInfos.getPlayerStart(victim, getServer());
+            // TODO: we really should prefer the victim's world!
+            // TODO: we should not select a random spawn; better to take the nearest.
+
+            Location victimSpawn = playerInfos.getPlayerStart(victim, projectile.getWorld(), getServer());
 
             Location start = projectile.getLocation().clone();
             start.add(0, 1, 0);
@@ -160,11 +179,12 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         if (!playerInfos.isKnown(player)) {
             player.teleport(playerInfos.getPlayerStart(player));
             String name = player.getName();
-            ChunkPosition homeChunk = playerInfos.get(player).getHomeChunk();
 
-            getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
-                    name,
-                    homeChunk));
+            for (ChunkPosition homeChunk : playerInfos.get(player).getHomeChunks()) {
+                getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
+                        name,
+                        homeChunk));
+            }
 
             saveIfNeeded();
         }
@@ -188,10 +208,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         //I'd prefer not overriding something so fundamental to play.
         //However, it's got a job to do now - chris
 
-        ChunkPosition home = playerInfos.get(e.getPlayer()).getHomeChunk();
+        List<ChunkPosition> homes = playerInfos.get(e.getPlayer()).getHomeChunks();
 
-        boolean wasHome = home.contains(e.getFrom());
-        boolean isHome = home.contains(e.getTo());
+        boolean wasHome = homes.contains(ChunkPosition.of(e.getFrom()));
+        boolean isHome = homes.contains(ChunkPosition.of(e.getTo()));
 
         if (wasHome != isHome) {
             if (isHome) {

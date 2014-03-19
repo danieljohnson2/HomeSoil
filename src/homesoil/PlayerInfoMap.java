@@ -67,13 +67,24 @@ public final class PlayerInfoMap {
         return infos.containsKey(player.getName());
     }
 
-    // TODO: comment
-    public void resetHomeChunk(OfflinePlayer player, World world, Server server) {
+    /**
+     * This method takes a chunk away from a player. If this was his last chunk,
+     * we randomly assign a new home chunk.
+     *
+     * @param player The player whose home chunk is to be removed.
+     * @param homeChunk The chunk to remove from the player.
+     * @param server The server we are running on.
+     */
+    public void removeHomeChunk(OfflinePlayer player, ChunkPosition homeChunk, Server server) {
         // if player is not yet known, there is no point to resetting his home
         // chunk. This will happen when he logs in!
 
         if (isKnown(player)) {
-            pickNewHomeChunk(world, server, get(player));
+            PlayerInfo info = get(player);
+            if (!info.tryRemoveHomeChunk(homeChunk)) {
+                World world = homeChunk.getWorld(server);
+                pickNewHomeChunk(world, server, info);
+            }
         }
     }
 
@@ -93,7 +104,7 @@ public final class PlayerInfoMap {
             homeChunks.clear();
 
             for (PlayerInfo info : infos.values()) {
-                homeChunks.add(info.getHomeChunk());
+                homeChunks.addAll(info.getHomeChunks());
             }
         }
 
@@ -112,7 +123,7 @@ public final class PlayerInfoMap {
      * @return The location to spawn him.
      */
     public Location getPlayerStart(Player player) {
-        return getPlayerStart(player, player.getServer());
+        return getPlayerStart(player, player.getWorld(), player.getServer());
     }
 
     /**
@@ -127,17 +138,18 @@ public final class PlayerInfoMap {
      * avoid this, or just check isKnown().
      *
      * @param player The player whose start position is needed.
+     * @param world The world the player's chunks should be in, in case we need
+     * to regenerate them.
      * @param server The server where the player will be.
      * @return The spawn location, or absent() if the player is unknown.
      */
-    public Location getPlayerStart(OfflinePlayer player, Server server) {
+    public Location getPlayerStart(OfflinePlayer player, World world, Server server) {
         PlayerInfo info = get(player);
-        Location spawn = info.findPlayerStartOrNull(server, true);
+        Location spawn = info.findPlayerStartOrNull(server, random, true);
 
         if (spawn != null) {
             return spawn;
         } else {
-            World world = info.getHomeChunk().getWorld(server);
             return pickNewHomeChunk(world, server, info);
         }
     }
@@ -161,7 +173,7 @@ public final class PlayerInfoMap {
             // after a while, we'll take what we can get!
             boolean picky = limit < 128;
 
-            Location spawn = info.findPlayerStartOrNull(server, picky);
+            Location spawn = info.findPlayerStartOrNull(server, random, picky);
             if (spawn != null) {
                 return spawn;
             }
