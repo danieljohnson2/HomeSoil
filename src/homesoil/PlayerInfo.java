@@ -103,61 +103,6 @@ public final class PlayerInfo implements MapFileMap.Storable {
         int index = random.nextInt(homeChunks.size());
         return homeChunks.get(index);
     }
-
-    /**
-     * This method finds a place to put the player when he spawns. It will be at
-     * the center of the home chunk of this player, but its y position is the
-     * result of a search; we look for a non-air, non-liquid block with two air
-     * blocks on top.
-     *
-     * @param server The server in which the player will spawn.
-     * @param random The RNG used to pick the starting chunk.
-     * @param picky The method fails if the player would be spawned in water or
-     * lava.
-     * @return The location to spawn him; null if no suitable location could be
-     * found.
-     */
-    public Location findPlayerStartOrNull(Server server, Random random, boolean picky) {
-        ChunkPosition pos = pickHomeChunk(random);
-        World world = pos.getWorld(server);
-        int blockX = pos.x * 16 + 8;
-        int blockZ = pos.z * 16 + 8;
-
-        final int startY = 253;
-
-        // we spawn the player a bit in the air, since he falls a bit
-        // while the world is loading. We need enough air for him to fall
-        // through. 5 is as much as we can have without damaging the player on
-        // landing.
-
-        final int spawnHover = 4;
-        final int spawnSpaceNeeded = spawnHover + 1;
-
-        int airCount = 0;
-
-        //wondering if we can trust this to always be higher than land, esp. in
-        //amplified terrain. I've seen lots of 1.7 terrain far higher than this
-        //and of course amplified can go higher still, and have multiple
-        //airspaces above ground.
-        //If we're using this for snowball targets, higher is better - chris
-        for (int y = startY; y > 1; --y) {
-            Block bl = world.getBlockAt(blockX, y, blockZ);
-
-            if (bl.getType() == Material.AIR) {
-                airCount++;
-            } else if (airCount >= spawnSpaceNeeded) {
-                if (picky && bl.isLiquid()) {
-                    break;
-                }
-
-                return new Location(world, blockX, y + spawnHover, blockZ);
-            } else {
-                break;
-            }
-        }
-
-        return null;
-    }
     ////////////////////////////////
     // Generation Count
     private static final AtomicInteger playerInfoGenerationCount = new AtomicInteger();

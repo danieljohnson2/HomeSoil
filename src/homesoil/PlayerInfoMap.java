@@ -4,6 +4,7 @@ import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 
 /**
@@ -145,13 +146,95 @@ public final class PlayerInfoMap {
      */
     public Location getPlayerStart(OfflinePlayer player, World world, Server server) {
         PlayerInfo info = get(player);
-        Location spawn = info.findPlayerStartOrNull(server, random, true);
+        ChunkPosition homeChunk = info.pickHomeChunk(random);
+        Location spawn = findPlayerStartOrNull(homeChunk, server, true);
 
         if (spawn != null) {
             return spawn;
         } else {
             return pickNewHomeChunk(world, server, info);
         }
+    }
+
+    /**
+     * This method returns all the player starts that can be found; there can be
+     * as many as one per home chunk; if some can't be resolved anymore they
+     * will be omitted. If the player is not known, this method returns an empty
+     * list and does not assign a home chunk.
+     *
+     * @param player The player whose start locations are wanted.
+     * @param server The server that is running.
+     * @return The locations, in the order the home chunks were acquired.
+     */
+    public List<Location> getPlayerStarts(OfflinePlayer player, Server server) {
+        ImmutableList.Builder<Location> b = ImmutableList.builder();
+
+        if (isKnown(player)) {
+            PlayerInfo info = get(player);
+            for (ChunkPosition homeChunk : info.getHomeChunks()) {
+                Location spawn = findPlayerStartOrNull(homeChunk, server, false);
+
+                if (spawn != null) {
+                    b.add(spawn);
+                }
+            }
+        }
+
+        return b.build();
+    }
+
+    /**
+     * This method finds a place to put the player when he spawns. It will be at
+     * the center of the home chunk of this player, but its y position is the
+     * result of a search; we look for a non-air, non-liquid block with two air
+     * blocks on top.
+     *
+     * @param server The server in which the player will spawn.
+     * @param random The RNG used to pick the starting chunk.
+     * @param picky The method fails if the player would be spawned in water or
+     * lava.
+     * @return The location to spawn him; null if no suitable location could be
+     * found.
+     */
+    private static Location findPlayerStartOrNull(ChunkPosition homeChunk, Server server, boolean picky) {
+        World world = homeChunk.getWorld(server);
+        int blockX = homeChunk.x * 16 + 8;
+        int blockZ = homeChunk.z * 16 + 8;
+
+        final int startY = 253;
+
+        // we spawn the player a bit in the air, since he falls a bit
+        // while the world is loading. We need enough air for him to fall
+        // through. 5 is as much as we can have without damaging the player on
+        // landing.
+
+        final int spawnHover = 4;
+        final int spawnSpaceNeeded = spawnHover + 1;
+
+        int airCount = 0;
+
+        //wondering if we can trust this to always be higher than land, esp. in
+        //amplified terrain. I've seen lots of 1.7 terrain far higher than this
+        //and of course amplified can go higher still, and have multiple
+        //airspaces above ground.
+        //If we're using this for snowball targets, higher is better - chris
+        for (int y = startY; y > 1; --y) {
+            Block bl = world.getBlockAt(blockX, y, blockZ);
+
+            if (bl.getType() == Material.AIR) {
+                airCount++;
+            } else if (airCount >= spawnSpaceNeeded) {
+                if (picky && bl.isLiquid()) {
+                    break;
+                }
+
+                return new Location(world, blockX, y + spawnHover, blockZ);
+            } else {
+                break;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -168,13 +251,14 @@ public final class PlayerInfoMap {
         // we'll try many times to find a spawn location
         // with a valid player start.
         for (int limit = 0; limit < 256; ++limit) {
-            info.setHomeChunk(getInitialChunkPosition(world));
+            ChunkPosition homeChunk = getInitialChunkPosition(world);
 
             // after a while, we'll take what we can get!
             boolean picky = limit < 128;
 
-            Location spawn = info.findPlayerStartOrNull(server, random, picky);
+            Location spawn = findPlayerStartOrNull(homeChunk, server, picky);
             if (spawn != null) {
+                info.setHomeChunk(homeChunk);
                 return spawn;
             }
         }

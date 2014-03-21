@@ -14,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.*;
 
-// TODO: do not regenerate the nether or the end!
 // TODO: snowball for each player
 /**
  * This is the plugin class itself, which acts as the main entry point for a
@@ -52,8 +51,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     /**
      * This method regenerates a chunk if it needs to be; But only on loading
-     * old ones, and it checks to ensure that it won't regen a home chunk nor
-     * any chunk already regenerated once.
+     * old ones, and it checks to ensure that it won't regenerate a home chunk
+     * nor any chunk already regenerated once. We also don't regenerate the
+     * nether or the end.
      *
      * As an optimization we don't even call this for new chunks but only for
      * chunks being reloaded.
@@ -61,13 +61,15 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param chunk The chunk to regenerate.
      */
     private void regenerateIfNeeded(Chunk chunk) {
-        ChunkPosition pos = ChunkPosition.of(chunk);
+        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
+            ChunkPosition pos = ChunkPosition.of(chunk);
 
-        if (alreadyLoadedOnce.add(pos)) {
-            if (playerInfos.getHomeChunks().contains(pos)) {
-                getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
-            } else {
-                chunk.getWorld().regenerateChunk(pos.x, pos.z);
+            if (alreadyLoadedOnce.add(pos)) {
+                if (playerInfos.getHomeChunks().contains(pos)) {
+                    getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
+                } else {
+                    chunk.getWorld().regenerateChunk(pos.x, pos.z);
+                }
             }
         }
     }
@@ -145,13 +147,25 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param victim The guy whose name is on the snowball.
      */
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
-        if (playerInfos.isKnown(victim)) {
-            // TODO: we really should prefer the victim's world!
-            // TODO: we should not select a random spawn; better to take the nearest.
+        List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim, getServer()));
 
-            Location victimSpawn = playerInfos.getPlayerStart(victim, projectile.getWorld(), getServer());
+        if (!victimSpawns.isEmpty()) {
+            final Location start = projectile.getLocation().clone();
 
-            Location start = projectile.getLocation().clone();
+            class DistanceComparator implements Comparator<Location> {
+
+                @Override
+                public int compare(Location left, Location right) {
+                    // this compares by distance from 'start', ascending, so the
+                    // nearest location is first.
+                    return (int) Math.signum(start.distanceSquared(left) - start.distanceSquared(right));
+                }
+            }
+
+            Collections.sort(victimSpawns, new DistanceComparator());
+
+            Location victimSpawn = victimSpawns.get(0);
+
             start.add(0, 1, 0);
             projectile.teleport(start);
 
