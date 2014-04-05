@@ -14,6 +14,8 @@ import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.*;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 
@@ -289,16 +291,30 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         //I'd prefer not overriding something so fundamental to play.
         //However, it's got a job to do now - chris
 
-        List<ChunkPosition> homes = playerInfos.get(e.getPlayer()).getHomeChunks();
+        if (e.getTo().getChunk() != e.getFrom().getChunk()) {
+            String fromPlayerName = playerInfos.identifyChunkOwner(ChunkPosition.of(e.getFrom()));
+            String toPlayerName = playerInfos.identifyChunkOwner(ChunkPosition.of(e.getTo()));
 
-        boolean wasHome = homes.contains(ChunkPosition.of(e.getFrom()));
-        boolean isHome = homes.contains(ChunkPosition.of(e.getTo()));
+            if (!fromPlayerName.equals(toPlayerName)) {
+                Player player = e.getPlayer();
 
-        if (wasHome != isHome) {
-            if (isHome) {
-                e.getPlayer().chat("You have entered your home chunk");
-            } else {
-                e.getPlayer().chat("You have exited your home chunk");
+                List<ChunkPosition> homes = playerInfos.get(player).getHomeChunks();
+
+                boolean isHome = homes.contains(ChunkPosition.of(e.getTo()));
+                boolean isLeaving = !fromPlayerName.isEmpty();
+                boolean isEntering = !toPlayerName.isEmpty();
+
+                if (isLeaving) {
+                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
+                }
+
+                if (isEntering) {
+                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
+
+                    if (isHome) {
+                        player.chat("This is §lyour§r home chunk");
+                    }
+                }
             }
         }
     }

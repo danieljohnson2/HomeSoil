@@ -183,6 +183,21 @@ public final class PlayerInfoMap {
         return b.build();
     }
 
+    // TODO: comment
+    
+    public String identifyChunkOwner(ChunkPosition position) {
+        if (getHomeChunks().contains(position)) {
+            for (Map.Entry<String, PlayerInfo> e : infos.entrySet()) {
+                PlayerInfo info = e.getValue();
+                if (info.getHomeChunks().contains(position)) {
+                    return e.getKey();
+                }
+            }
+        }
+
+        return "";
+    }
+
     /**
      * This method finds a place to put the player when he spawns. It will be at
      * the center of the home chunk of this player, but its y position is the
