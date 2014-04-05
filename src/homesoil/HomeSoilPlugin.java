@@ -1,6 +1,5 @@
 package homesoil;
 
-import com.google.common.base.*;
 import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
@@ -8,11 +7,14 @@ import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.*;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.*;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 
 // TODO: snowball for each player
 /**
@@ -183,6 +185,36 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             //note: beginning the snowball at destination.y + 1 would be good,
             //not sure on the specifics of how that's done
             //ProjectileDirector now handles its own speed as it varies w. distance
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void bestowSnowball(Player player) {
+        PlayerInventory inventory = player.getInventory();
+
+        ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 16);
+        ItemMeta meta = itemStack.getItemMeta().clone();
+        meta.setDisplayName(player.getName());
+        meta.setLore(Arrays.asList(
+                String.format("Seeks %s player's", player.getName()),
+                "home soil"));
+        itemStack.setItemMeta(meta);
+        inventory.setItem(35, itemStack);
+
+        player.updateInventory();
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent e) {
+        final HumanEntity clicked = e.getWhoClicked();
+
+        if (clicked instanceof Player) {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    bestowSnowball((Player) clicked);
+                }
+            }.runTaskLater(this, 1);
         }
     }
 
