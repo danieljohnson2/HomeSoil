@@ -196,7 +196,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         ItemMeta meta = itemStack.getItemMeta().clone();
         meta.setDisplayName(player.getName());
         meta.setLore(Arrays.asList(
-                String.format("Seeks %s player's", player.getName()),
+                String.format("Seeks %s's", player.getName()),
                 "home soil"));
         itemStack.setItemMeta(meta);
         inventory.setItem(35, itemStack);
@@ -223,7 +223,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         Player player = e.getPlayer();
 
         if (!playerInfos.isKnown(player)) {
-            player.teleport(playerInfos.getPlayerStart(player));
             String name = player.getName();
 
             for (ChunkPosition homeChunk : playerInfos.get(player).getHomeChunks()) {
