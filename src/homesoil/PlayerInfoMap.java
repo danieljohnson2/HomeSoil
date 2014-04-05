@@ -18,7 +18,7 @@ public final class PlayerInfoMap {
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
     private int homeChunksGenCount = 0;
-    private static final int spawnRadiusInChunks = 32;
+    private static final int spawnRadiusInChunks = 64;
     private final Random random = new Random();
 
     /**
