@@ -18,6 +18,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scoreboard.Scoreboard;
 
 // TODO: snowball for each player
 /**
@@ -292,15 +293,18 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         //However, it's got a job to do now - chris
 
         if (e.getTo().getChunk() != e.getFrom().getChunk()) {
-            String fromPlayerName = playerInfos.identifyChunkOwner(ChunkPosition.of(e.getFrom()));
-            String toPlayerName = playerInfos.identifyChunkOwner(ChunkPosition.of(e.getTo()));
+            ChunkPosition fromChunk = ChunkPosition.of(e.getFrom());
+            ChunkPosition toChunk = ChunkPosition.of(e.getTo());
+
+            String fromPlayerName = playerInfos.identifyChunkOwner(fromChunk);
+            String toPlayerName = playerInfos.identifyChunkOwner(toChunk);
 
             if (!fromPlayerName.equals(toPlayerName)) {
                 Player player = e.getPlayer();
 
                 List<ChunkPosition> homes = playerInfos.get(player).getHomeChunks();
 
-                boolean isHome = homes.contains(ChunkPosition.of(e.getTo()));
+                boolean isHome = homes.contains(toChunk);
                 boolean isLeaving = !fromPlayerName.isEmpty();
                 boolean isEntering = !toPlayerName.isEmpty();
 
@@ -312,7 +316,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
 
                     if (isHome) {
-                        player.chat("This is §lyour§r home chunk");
+                        int chunkNo = homes.indexOf(toChunk);
+                        player.chat(String.format("This is §lyour§r home chunk (#%d of %d)",
+                                chunkNo + 1,
+                                homes.size()));
                     }
                 }
             }
