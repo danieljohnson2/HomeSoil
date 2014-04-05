@@ -14,7 +14,7 @@ import org.bukkit.entity.*;
  *
  * @author DanJ
  */
-public final class ChunkPosition implements MapFileMap.Storable {
+public final class ChunkPosition implements MapFileMap.Storable, Comparable<ChunkPosition> {
 
     public final int x;
     public final int z;
@@ -146,5 +146,12 @@ public final class ChunkPosition implements MapFileMap.Storable {
         map.put("z", z);
         map.put("world", worldName);
         return map;
+    }
+
+    @Override
+    public int compareTo(ChunkPosition other) {
+        int cmp = this.x - other.x;
+        if (cmp != 0) return cmp;
+        return this.z - other.z;
     }
 }

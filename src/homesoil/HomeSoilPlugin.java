@@ -4,6 +4,7 @@ import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.*;
@@ -55,31 +56,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    /**
-     * This method regenerates a chunk if it needs to be; But only on loading
-     * old ones, and it checks to ensure that it won't regenerate a home chunk
-     * nor any chunk already regenerated once. We also don't regenerate the
-     * nether or the end.
-     *
-     * As an optimization we don't even call this for new chunks but only for
-     * chunks being reloaded.
-     *
-     * @param chunk The chunk to regenerate.
-     */
-    private void regenerateIfNeeded(Chunk chunk) {
-        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
-            ChunkPosition pos = ChunkPosition.of(chunk);
-
-            if (alreadyLoadedOnce.add(pos)) {
-                if (playerInfos.getHomeChunks().contains(pos)) {
-                    getLogger().info(String.format("Unable to regenerate [%s] as it is a home chunk.", pos));
-                } else {
-                    chunk.getWorld().regenerateChunk(pos.x, pos.z);
-                }
-            }
-        }
-    }
-
     ////////////////////////////////
     // Event Handlers
     @Override
@@ -88,6 +64,13 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
         load();
         getServer().getPluginManager().registerEvents(this, this);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                placeNextPillarOfDoom();
+            }
+        }.runTaskTimer(this, 10, doomChunkDelay);
     }
 
     @Override
@@ -281,8 +264,19 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
-        if (!e.isNewChunk()) {
-            regenerateIfNeeded(e.getChunk());
+        Chunk chunk = e.getChunk();
+
+        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
+            scheduleRegeneration(ChunkPosition.of(chunk));
+        }
+    }
+
+    @EventHandler
+    public void onChunkUnload(ChunkUnloadEvent e) {
+        Chunk chunk = e.getChunk();
+
+        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
+            unscheduleRegeneration(ChunkPosition.of(chunk));
         }
     }
 
@@ -324,5 +318,134 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+    }
+    private List<ChunkPosition> loadedChunks = Lists.newArrayList();
+    private List<ChunkPosition> doomSchedule = Lists.newArrayList();
+    private final Random regenRandom = new Random();
+
+    private void scheduleRegeneration(ChunkPosition where) {
+        loadedChunks.add(where);
+    }
+
+    private void unscheduleRegeneration(ChunkPosition where) {
+        loadedChunks.remove(where);
+    }
+
+    private void placeNextPillarOfDoom() {
+        if (!loadedChunks.isEmpty()) {
+            if (doomSchedule.isEmpty()) {
+                prepareDoomSchedule();
+            }
+
+            if (!doomSchedule.isEmpty()) {
+                ChunkPosition where = doomSchedule.get(0);
+                if (!playerInfos.getHomeChunks().contains(where)) {
+                    doomSchedule.remove(0);
+                    placePillarOfDoom(where);
+                }
+            }
+        }
+    }
+
+    private void prepareDoomSchedule() {
+        switch (regenRandom.nextInt(4)) {
+            case 0:
+                prepareDoomScheduleX(true);
+                break;
+
+            case 1:
+                prepareDoomScheduleX(false);
+                break;
+
+            case 2:
+                prepareDoomScheduleZ(true);
+                break;
+                
+            case 3:
+                prepareDoomScheduleZ(false);
+                break;
+
+            default:
+                throw new IllegalStateException("This can't happen!");
+        }
+    }
+
+    private void prepareDoomScheduleX(boolean reversed) {
+        int index = regenRandom.nextInt(loadedChunks.size());
+
+        int z = loadedChunks.get(index).z;
+
+        for (ChunkPosition pos : loadedChunks) {
+            if (pos.z == z) {
+                doomSchedule.add(pos);
+            }
+        }
+
+        if (reversed) {
+            Collections.sort(doomSchedule, Collections.reverseOrder());
+        } else {
+            Collections.sort(doomSchedule);
+        }
+    }
+
+    private void prepareDoomScheduleZ(boolean reversed) {
+        int index = regenRandom.nextInt(loadedChunks.size());
+
+        int x = loadedChunks.get(index).x;
+
+        for (ChunkPosition pos : loadedChunks) {
+            if (pos.x == x) {
+                doomSchedule.add(pos);
+            }
+        }
+
+        if (reversed) {
+            Collections.sort(doomSchedule, Collections.reverseOrder());
+        } else {
+            Collections.sort(doomSchedule);
+        }
+    }
+
+    private void placePillarOfDoom(final ChunkPosition where) {
+        System.out.println(String.format(
+                "Doom at %d, %d", where.x * 16, where.z * 16));
+
+        for (int i = 0; i < 16; ++i) {
+            final boolean isLastOne = i == 15;
+            final int top = ((16 - i) * 16) - 1;
+
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (isLastOne) {
+                        World world = where.getWorld(getServer());
+                        world.regenerateChunk(where.x, where.z);
+                    } else {
+                        placeCubeOfDoom(where, top);
+                    }
+                }
+            }.runTaskLater(this, i * doomCubeDelay);
+        }
+    }
+    private final int doomCubeDelay = 10;
+    private final int doomChunkDelay = doomCubeDelay * 16;
+
+    private void placeCubeOfDoom(ChunkPosition where, int top) {
+        World world = where.getWorld(getServer());
+
+        int startX = where.x * 16;
+        int startZ = where.z * 16;
+
+        for (int x = startX; x < startX + 16; ++x) {
+            for (int z = startZ; z < startZ + 16; ++z) {
+                for (int y = top - 15; y <= top; ++y) {
+                    Location loc = new Location(world, x, y, z);
+                    Block block = world.getBlockAt(loc);
+                    block.setType(Material.BEDROCK);
+                }
+            }
+        }
+
+        world.createExplosion(startX + 8, top - 8, startZ + 8, 0f);
     }
 }
