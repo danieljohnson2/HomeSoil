@@ -126,7 +126,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param shooter The snowball-throwing miscreant.
      * @param victim The poor fellow named by the snowball.
      */
-    private void tryToStealHomeChunk(Player shooter, OfflinePlayer victim) {
+    private void tryToStealHomeChunk(final Player shooter, OfflinePlayer victim) {
         if (playerInfos.isKnown(victim)) {
             PlayerInfo victimInfo = playerInfos.get(victim);
             ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
@@ -138,26 +138,43 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
 
-                    // but let's launch a firework too!
-                    // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
-                    // but we can ask Java to override. This is checked: an error occurs if it's not
-                    // a firework.
-                    Location loc = shooter.getLocation();
-                    Firework firework = (Firework) shooter.getWorld().spawnEntity(loc, EntityType.FIREWORK);
-                    FireworkMeta meta = firework.getFireworkMeta().clone();
+                    int numberOfFireworks = shooterInfo.getHomeChunks().size();
+                    numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
+                    final Location loc = shooter.getLocation().clone();
 
-                    // Make it fancy! This is a 'fluent' style class, where we chain method
-                    // calls with '.'.
-                    FireworkEffect effect = FireworkEffect.builder().
-                            withColor(Color.LIME).
-                            with(FireworkEffect.Type.BALL_LARGE).
-                            build();
-                    meta.addEffect(effect);
-                    meta.setPower(2);
-                    firework.setFireworkMeta(meta);
+                    for (int i = 0; i < numberOfFireworks; ++i) {
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                launchFirework(loc);
+                            }
+                        }.runTaskLater(this, 10 * i);
+                    }
                 }
             }
         }
+    }
+
+    private void launchFirework(Location loc) {
+        // but let's launch a firework too!
+        // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
+        // but we can ask Java to override. This is checked: an error occurs if it's not
+        // a firework.
+
+        Firework firework = (Firework) loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+        FireworkMeta meta = firework.getFireworkMeta().clone();
+
+        // Make it fancy! This is a 'fluent' style class, where we chain method
+        // calls with '.'.
+        FireworkEffect effect = FireworkEffect.builder().
+                withColor(Color.LIME).
+                withFlicker().
+                withTrail().
+                with(FireworkEffect.Type.CREEPER).
+                build();
+        meta.addEffect(effect);
+        meta.setPower(2);
+        firework.setFireworkMeta(meta);
     }
 
     /**
