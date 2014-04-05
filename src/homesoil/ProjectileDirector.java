@@ -68,7 +68,7 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
         Location loc = projectile.getLocation();
 
         double dx = destination.getX() - loc.getX();
-        double dy = (destination.getY()+2) - loc.getY(); //target two blocks off the ground: head height!
+        double dy = (destination.getY() + 2) - loc.getY(); //target two blocks off the ground: head height!
         double dz = destination.getZ() - loc.getZ();
 
         // If the projectile is close enough to the destination,
@@ -80,27 +80,10 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
             // This is just a burst of fire (goes with the fireticks effect, good)
             projectile.getWorld().playEffect(loc, Effect.MOBSPAWNER_FLAMES, null, 128);
 
-            // but let's launch a firework too!
-            // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
-            // but we can ask Java to override. This is checked: an error occurs if it's not
-            // a firework.
-            Firework firework = (Firework) projectile.getWorld().spawnEntity(loc, EntityType.FIREWORK);
-            FireworkMeta meta = firework.getFireworkMeta().clone();
-
-            // Make it fancy! This is a 'fluent' style class, where we chain method
-            // calls with '.'.
-            FireworkEffect effect = FireworkEffect.builder().
-                    withColor(Color.LIME).
-                    with(Type.BALL_LARGE).
-                    build();
-            meta.addEffect(effect);
-            meta.setPower(2);
-            firework.setFireworkMeta(meta);
-            
             //If possible I would like to have just the burst at ground level (perhaps combined with
             //the flames effect, perhaps instead of) but I admit the firework is cool :)
             //You can launch tons of them by firing normal snowballs inside your home chunk
-            
+
             cancel();
             return;
         }

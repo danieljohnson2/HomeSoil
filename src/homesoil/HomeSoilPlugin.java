@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.*;
 import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.*;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -136,6 +137,24 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
+
+                    // but let's launch a firework too!
+                    // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
+                    // but we can ask Java to override. This is checked: an error occurs if it's not
+                    // a firework.
+                    Location loc = shooter.getLocation();
+                    Firework firework = (Firework) shooter.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+                    FireworkMeta meta = firework.getFireworkMeta().clone();
+
+                    // Make it fancy! This is a 'fluent' style class, where we chain method
+                    // calls with '.'.
+                    FireworkEffect effect = FireworkEffect.builder().
+                            withColor(Color.LIME).
+                            with(FireworkEffect.Type.BALL_LARGE).
+                            build();
+                    meta.addEffect(effect);
+                    meta.setPower(2);
+                    firework.setFireworkMeta(meta);
                 }
             }
         }
