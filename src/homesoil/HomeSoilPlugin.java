@@ -337,8 +337,12 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!playerInfos.getHomeChunks().contains(where)) {
                     placePillarOfDoom(where);
+                    doomSchedule.remove(0);
+                } else {
+                    doomSchedule.remove(0);
                 }
-                doomSchedule.remove(0);
+                //we need to remove the entry whether or not we placed a pillar
+                //because if it's a home chunk, otherwise it freezes
             }
         }
     }
@@ -356,7 +360,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             case 2:
                 prepareDoomScheduleZ(true);
                 break;
-                
+
             case 3:
                 prepareDoomScheduleZ(false);
                 break;
@@ -431,16 +435,40 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
         int startX = where.x * 16;
         int startZ = where.z * 16;
+        //these are hollow cubes in an attempt to hit the server less
+        //fewer changed blocks might help, if that doesn't work we'll try
+        //a single vertical spike with explosions
 
-        for (int x = startX; x < startX + 16; ++x) {
+        for (int y = top - 15; y <= top; ++y) {
+            for (int x = startX; x < startX + 16; ++x) {
+
+                Location loc = new Location(world, x, y, startZ);
+                Block block = world.getBlockAt(loc);
+                block.setType(Material.BEDROCK);
+                loc = new Location(world, x, y, startZ + 16);
+                block = world.getBlockAt(loc);
+                block.setType(Material.BEDROCK);
+
+            }
             for (int z = startZ; z < startZ + 16; ++z) {
-                for (int y = top - 15; y <= top; ++y) {
-                    Location loc = new Location(world, x, y, z);
-                    Block block = world.getBlockAt(loc);
-                    block.setType(Material.BEDROCK);
-                }
+                Location loc = new Location(world, startX, y, z);
+                Block block = world.getBlockAt(loc);
+                block.setType(Material.BEDROCK);
+                loc = new Location(world, startX + 16, y, z);
+                block = world.getBlockAt(loc);
+                block.setType(Material.BEDROCK);
             }
         }
+        //construct walls of cube, without filling it
+        int y = top - 15;
+        for (int x = startX; x < startX + 16; ++x) {
+            for (int z = startZ; z < startZ + 16; ++z) {
+                Location loc = new Location(world, x, y, z);
+                Block block = world.getBlockAt(loc);
+                block.setType(Material.BEDROCK);
+            }
+        }
+        //the floor of the cube is solid so it looks solid
 
         world.createExplosion(startX + 8, top - 8, startZ + 8, 0f);
     }
