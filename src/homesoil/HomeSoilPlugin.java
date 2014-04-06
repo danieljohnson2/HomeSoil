@@ -445,7 +445,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 Location loc = new Location(world, x, y, startZ);
                 Block block = world.getBlockAt(loc);
                 block.setType(Material.BEDROCK);
-                loc = new Location(world, x, y, startZ + 16);
+                loc = new Location(world, x, y, startZ + 15);
                 block = world.getBlockAt(loc);
                 block.setType(Material.BEDROCK);
 
@@ -454,7 +454,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 Location loc = new Location(world, startX, y, z);
                 Block block = world.getBlockAt(loc);
                 block.setType(Material.BEDROCK);
-                loc = new Location(world, startX + 16, y, z);
+                loc = new Location(world, startX + 15, y, z);
                 block = world.getBlockAt(loc);
                 block.setType(Material.BEDROCK);
             }
