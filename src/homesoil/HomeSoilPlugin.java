@@ -336,9 +336,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!playerInfos.getHomeChunks().contains(where)) {
-                    doomSchedule.remove(0);
                     placePillarOfDoom(where);
                 }
+                doomSchedule.remove(0);
             }
         }
     }
