@@ -470,6 +470,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         }
         //the floor of the cube is solid so it looks solid
 
-        world.createExplosion(startX + 8, top - 8, startZ + 8, 0f);
+        world.createExplosion(startX + 8, top - 8, startZ + 8, 1f);
     }
 }
