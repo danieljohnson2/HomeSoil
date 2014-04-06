@@ -437,7 +437,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         int startZ = where.z * 16;
         //these are hollow cubes in an attempt to hit the server less
         //fewer changed blocks might help, if that doesn't work we'll try
-        //a single vertical spike with explosions
+        //a single vertical spike with explosions (perhaps explosions everywhere
+        //it intersects a non-air block, then the regen. That would be damaging)
+        //looks like it is still too laggy: is it the number of blocks changed,
+        //or the explosions?
 
         for (int y = top - 15; y <= top; ++y) {
             for (int x = startX; x < startX + 16; ++x) {
