@@ -421,60 +421,22 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         World world = where.getWorld(getServer());
                         world.regenerateChunk(where.x, where.z);
                     } else {
-                        placeCubeOfDoom(where, top);
+
+                        World world = where.getWorld(getServer());
+                        int startX = (where.x * 16) + 8;
+                        int startZ = (where.z * 16) + 8;
+                        for (int y = top - 15; y <= top; ++y) {
+
+                            Location loc = new Location(world, startX, y, startZ);
+                            Block block = world.getBlockAt(loc);
+                            block.setType(Material.LAVA);
+                            world.playSound(loc, Sound.AMBIENCE_THUNDER, 0.5f, 10f);
+                        }
                     }
                 }
             }.runTaskLater(this, i * doomCubeDelay);
         }
     }
-    private final int doomCubeDelay = 10;
-    private final int doomChunkDelay = doomCubeDelay * 16;
-
-    private void placeCubeOfDoom(ChunkPosition where, int top) {
-        World world = where.getWorld(getServer());
-
-        int startX = where.x * 16;
-        int startZ = where.z * 16;
-        //these are hollow cubes in an attempt to hit the server less
-        //fewer changed blocks might help, if that doesn't work we'll try
-        //a single vertical spike with explosions (perhaps explosions everywhere
-        //it intersects a non-air block, then the regen. That would be damaging)
-        //looks like it is still too laggy: is it the number of blocks changed,
-        //or the explosions?
-
-        for (int y = top - 15; y <= top; ++y) {
-            for (int x = startX; x < startX + 16; ++x) {
-
-                Location loc = new Location(world, x, y, startZ);
-                Block block = world.getBlockAt(loc);
-                block.setType(Material.BEDROCK);
-                loc = new Location(world, x, y, startZ + 15);
-                block = world.getBlockAt(loc);
-                block.setType(Material.BEDROCK);
-
-            }
-            for (int z = startZ; z < startZ + 16; ++z) {
-                Location loc = new Location(world, startX, y, z);
-                Block block = world.getBlockAt(loc);
-                block.setType(Material.BEDROCK);
-                loc = new Location(world, startX + 15, y, z);
-                block = world.getBlockAt(loc);
-                block.setType(Material.BEDROCK);
-            }
-        }
-        //construct walls of cube, without filling it
-        int y = top - 15;
-        for (int x = startX; x < startX + 16; ++x) {
-            for (int z = startZ; z < startZ + 16; ++z) {
-                Location loc = new Location(world, x, y, z);
-                Block block = world.getBlockAt(loc);
-                block.setType(Material.BEDROCK);
-            }
-        }
-        //the floor of the cube is solid so it looks solid
-
-        //world.createExplosion(startX + 8, top - 8, startZ + 8, 1f);
-        Location loc = new Location(world, startX + 8, top - 8, startZ + 8);
-        world.playSound(loc, Sound.EXPLODE, 1f, 1f);
-    }
+    private final int doomCubeDelay = 8;
+    private final int doomChunkDelay = doomCubeDelay * 32;
 }
