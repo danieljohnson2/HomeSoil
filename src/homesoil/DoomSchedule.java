@@ -28,19 +28,42 @@ import org.bukkit.scheduler.*;
 public final class DoomSchedule extends BukkitRunnable implements Listener {
 
     private final HomeSoilPlugin plugin;
-    private final List<ChunkPosition> loadedChunks = Lists.newArrayList();
-    private final List<ChunkPosition> doomSchedule = Lists.newArrayList();
-    private final Random regenRandom = new Random();
 
     public DoomSchedule(HomeSoilPlugin plugin) {
         this.plugin = Preconditions.checkNotNull(plugin);
     }
+    ////////////////////////////////////////////////////////////////
+    // Scheduling
+    //
+    /**
+     * This delay is how many ticks we wait between segments of the doom
+     * pillars.
+     */
+    private final int doomSegmentDelay = 8;
+    /**
+     * This delay is how long we wait between doom pillars; we compute this to
+     * be long enough that only one pillar at a time is in play.
+     */
+    private final int doomChunkDelay = doomSegmentDelay * 32;
 
+    /**
+     * This method is called to start the task; it schedules it to run
+     * regularly, and also hooks up events so we can tell what chunks are
+     * loaded.
+     *
+     * @param plugin The plugin object for home soil; we register events with
+     * this.
+     */
     public void start(Plugin plugin) {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         runTaskTimer(plugin, 10, doomChunkDelay);
     }
 
+    /**
+     * This method is called to stop the task, when the plugin is disabled; it
+     * also unregisters the events, so its safe to call start() again to begin
+     * all over again.
+     */
     public void stop() {
         cancel();
         HandlerList.unregisterAll(this);
@@ -48,10 +71,6 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
 
     @Override
     public void run() {
-        placeNextPillarOfDoom();
-    }
-
-    private void placeNextPillarOfDoom() {
         if (!loadedChunks.isEmpty()) {
             if (doomSchedule.isEmpty()) {
                 prepareDoomSchedule();
@@ -60,7 +79,10 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!plugin.getPlayerInfos().getHomeChunks().contains(where)) {
-                    placePillarOfDoomLater(where);
+                    System.out.println(String.format(
+                            "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
+
+                    placeSegmentOfDoomLater(where, 15);
                 }
 
                 //we need to remove the entry whether or not we placed a pillar
@@ -69,82 +91,43 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             }
         }
     }
+    ////////////////////////////////////////////////////////////////
+    // Pillars of Doom
+    //
 
-    private void prepareDoomSchedule() {
-        switch (regenRandom.nextInt(4)) {
-            case 0:
-                prepareDoomScheduleX(true);
-                break;
-
-            case 1:
-                prepareDoomScheduleX(false);
-                break;
-
-            case 2:
-                prepareDoomScheduleZ(true);
-                break;
-
-            case 3:
-                prepareDoomScheduleZ(false);
-                break;
-
-            default:
-                throw new IllegalStateException("This can't happen!");
-        }
-    }
-
-    private void prepareDoomScheduleX(boolean reversed) {
-        int index = regenRandom.nextInt(loadedChunks.size());
-
-        int z = loadedChunks.get(index).z;
-
-        for (ChunkPosition pos : loadedChunks) {
-            if (pos.z == z) {
-                doomSchedule.add(pos);
-            }
-        }
-
-        if (reversed) {
-            Collections.sort(doomSchedule, Collections.reverseOrder());
-        } else {
-            Collections.sort(doomSchedule);
-        }
-    }
-
-    private void prepareDoomScheduleZ(boolean reversed) {
-        int index = regenRandom.nextInt(loadedChunks.size());
-
-        int x = loadedChunks.get(index).x;
-
-        for (ChunkPosition pos : loadedChunks) {
-            if (pos.x == x) {
-                doomSchedule.add(pos);
-            }
-        }
-
-        if (reversed) {
-            Collections.sort(doomSchedule, Collections.reverseOrder());
-        } else {
-            Collections.sort(doomSchedule);
-        }
-    }
-
-    private void placePillarOfDoomLater(ChunkPosition where) {
-        System.out.println(String.format(
-                "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
-
-        placeSegmentOfDoomLater(where, 16);
-    }
-
+    /**
+     * This method does not do anything now, but schedules a segment of the
+     * pillar; this segment fills a 16x16x16 area, specified in chunk
+     * co-ordinates. The topmost chunk is at chunkY=15.
+     *
+     * We start the doom pillar by passing 15 here. After a delay, the chunk
+     * will be updated, and then this method is called again to do the next
+     * lower chunk. When we hit 0, we regenerate instead of building a doom
+     * pillar.
+     *
+     * @param where The chunk to be filled with doom.
+     * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
+     */
     private void placeSegmentOfDoomLater(final ChunkPosition where, final int chunkY) {
         new BukkitRunnable() {
             @Override
             public void run() {
                 placeSegmentOfDoom(where, chunkY);
             }
-        }.runTaskLater(plugin, doomCubeDelay);
+        }.runTaskLater(plugin, doomSegmentDelay);
     }
 
+    /**
+     * This method places a doom pillar segment; if chunkY is 0, this
+     * regenerates the chunk.
+     *
+     * If it does not regenerate the chunk, then it will schedule the next chunk
+     * of the pillar. This means we don't need to keep so many runnables alive
+     * at once.
+     *
+     * @param where The chunk to be filled with doom.
+     * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
+     */
     private void placeSegmentOfDoom(ChunkPosition where, int chunkY) {
         World world = where.getWorld(plugin.getServer());
 
@@ -152,11 +135,11 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             world.regenerateChunk(where.x, where.z);
         } else {
             int top = chunkY * 16;
-            int startX = (where.x * 16) + 8;
-            int startZ = (where.z * 16) + 8;
+            int centerX = (where.x * 16) + 8;
+            int centerZ = (where.z * 16) + 8;
 
             for (int y = top - 16; y < top; ++y) {
-                Location loc = new Location(world, startX, y, startZ);
+                Location loc = new Location(world, centerX, y, centerZ);
                 Block block = world.getBlockAt(loc);
                 block.setType(Material.LAVA);
                 world.playSound(loc, Sound.AMBIENCE_THUNDER, 0.5f, 10f);
@@ -165,8 +148,71 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             placeSegmentOfDoomLater(where, chunkY - 1);
         }
     }
-    private final int doomCubeDelay = 8;
-    private final int doomChunkDelay = doomCubeDelay * 32;
+    ////////////////////////////////////////////////////////////////
+    // Path of Doom
+    //
+    private final List<ChunkPosition> doomSchedule = Lists.newArrayList();
+    private final Random regenRandom = new Random();
+
+    /**
+     * This method generates the doomSchedule, the list of chunks we mean to
+     * visit. Once a chunk is doomed, nothing (but a server reset) can save it.
+     * We pick randomly which direction to run the schedule.
+     */
+    private void prepareDoomSchedule() {
+        boolean isX = regenRandom.nextBoolean();
+        boolean reversed = regenRandom.nextBoolean();
+        int index = regenRandom.nextInt(loadedChunks.size());
+        ChunkPosition origin = loadedChunks.get(index);
+
+        doomSchedule.clear();
+
+        if (isX) {
+            getLoadedChunkXRow(doomSchedule, origin.x);
+        } else {
+            getLoadedChunkZRow(doomSchedule, origin.z);
+        }
+
+        if (reversed) {
+            Collections.sort(doomSchedule, Collections.reverseOrder());
+        } else {
+            Collections.sort(doomSchedule);
+        }
+    }
+
+    /**
+     * This method finds every loaded chunk whose 'x' co-ordinate matches the
+     * parameter, and adds each one to 'destination'.
+     *
+     * @param destination The collection to populate.
+     * @param x The chunk-x co-ordinate for the row you want.
+     */
+    private void getLoadedChunkXRow(Collection<ChunkPosition> destination, int x) {
+        for (ChunkPosition pos : loadedChunks) {
+            if (pos.x == x) {
+                destination.add(pos);
+            }
+        }
+    }
+
+    /**
+     * This method finds every loaded chunk whose 'z' co-ordinate matches the
+     * parameter, and adds each one to 'destination'.
+     *
+     * @param destination The collection to populate.
+     * @param z The chunk-z co-ordinate for the row you want.
+     */
+    private void getLoadedChunkZRow(Collection<ChunkPosition> destination, int z) {
+        for (ChunkPosition pos : loadedChunks) {
+            if (pos.z == z) {
+                destination.add(pos);
+            }
+        }
+    }
+    ////////////////////////////////////////////////////////////////
+    // Chunk tracking
+    //
+    private final List<ChunkPosition> loadedChunks = Lists.newArrayList();
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
@@ -184,5 +230,5 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
         if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
             loadedChunks.remove(ChunkPosition.of(chunk));
         }
-    }    
+    }
 }

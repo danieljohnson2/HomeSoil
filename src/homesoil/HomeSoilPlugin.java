@@ -51,7 +51,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             playerInfos.save(playersFile);
         }
     }
-    
+
     public PlayerInfoMap getPlayerInfos() {
         return playerInfos;
     }
