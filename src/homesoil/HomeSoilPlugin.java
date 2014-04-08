@@ -4,20 +4,16 @@ import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
-import org.bukkit.event.world.*;
 import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.*;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.*;
 
-// TODO: snowball for each player
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -29,6 +25,16 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     private static final File playersFile = new File("HomeSoil.txt");
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
     private final DoomSchedule doomSchedule = new DoomSchedule(this);
+
+    /**
+     * This method provides access to the player info so we can move some logic
+     * out to other classes.
+     *
+     * @return The PlayerInfoMap, from which PlayerInfos may be obtained.
+     */
+    public PlayerInfoMap getPlayerInfos() {
+        return playerInfos;
+    }
 
     /**
      * This method loads player data from the HomeSoil file.
@@ -50,10 +56,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             getLogger().info("Saving HomeSoil State");
             playerInfos.save(playersFile);
         }
-    }
-
-    public PlayerInfoMap getPlayerInfos() {
-        return playerInfos;
     }
 
     ////////////////////////////////
@@ -121,28 +123,56 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
                     int numberOfFireworks = shooterInfo.getHomeChunks().size();
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
-                    final Location loc = shooter.getLocation().clone();
 
-                    for (int i = 0; i < numberOfFireworks; ++i) {
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                launchFirework(loc);
-                            }
-                        }.runTaskLater(this, 10 * i);
+                    if (numberOfFireworks > 0) {
+                        launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
                 }
             }
         }
     }
 
-    private void launchFirework(Location loc) {
+    /**
+     * This method schedules a firework barrage to be launched; the task
+     * launches one every ten ticks until it has fired off enough.
+     *
+     * @param spawnLocation The point from which the firework will spawn.
+     * @param numberOfFireworks The number of fireworks.
+     */
+    private void launchFireworksLater(final Location spawnLocation, final int numberOfFireworks) {
+        new BukkitRunnable() {
+            // lets be safe and not let the location change while we are doing this!
+            private Location fixedSpawnLocation = spawnLocation.clone();
+            // this field will count down the firewsorks so we know when to stop
+            private int fireworksRemaining = numberOfFireworks;
+
+            @Override
+            public void run() {
+                if (fireworksRemaining > 0) {
+                    launchFirework(fixedSpawnLocation);
+                    --fireworksRemaining;
+                } else {
+                    // once there are no more fireworks, we can finally stop
+                    // the madness.
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 0, 10);
+    }
+
+    /**
+     * This method spawns a firework to celebrate stealing a chunk.
+     *
+     * @param spawnLocation The point from which the firework will spawn.
+     */
+    private void launchFirework(Location spawnLocation) {
         // but let's launch a firework too!
         // Language note: (Firework) here is a cast- spawnEntity does not return the correct type,
         // but we can ask Java to override. This is checked: an error occurs if it's not
         // a firework.
 
-        Firework firework = (Firework) loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+        World world = spawnLocation.getWorld();
+        Firework firework = (Firework) world.spawnEntity(spawnLocation, EntityType.FIREWORK);
         FireworkMeta meta = firework.getFireworkMeta().clone();
 
         // Make it fancy! This is a 'fluent' style class, where we chain method
@@ -180,7 +210,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     return (int) Math.signum(start.distanceSquared(left) - start.distanceSquared(right));
                 }
             }
-
             Collections.sort(victimSpawns, new DistanceComparator());
 
             Location victimSpawn = victimSpawns.get(0);
@@ -205,6 +234,11 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    /**
+     * This method gives a player a snowball in a designated snowball slot.
+     *
+     * @param player The player to be gifted with snow!
+     */
     @SuppressWarnings("deprecation")
     private void bestowSnowball(Player player) {
         PlayerInventory inventory = player.getInventory();
@@ -259,9 +293,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
-        //we are going to want to remove this in final build entirely:
-        //I'd prefer not overriding something so fundamental to play.
-        //However, it's got a job to do now - chris
+        // We decided to keep this, but try to optimize by only checking
+        // when a player moves from chunk to chunk.
 
         if (e.getTo().getChunk() != e.getFrom().getChunk()) {
             ChunkPosition fromChunk = ChunkPosition.of(e.getFrom());
