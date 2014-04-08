@@ -27,8 +27,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     private static final File playersFile = new File("HomeSoil.txt");
-    private final Set<ChunkPosition> alreadyLoadedOnce = Sets.newHashSet();
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
+    private final DoomSchedule doomSchedule = new DoomSchedule(this);
 
     /**
      * This method loads player data from the HomeSoil file.
@@ -51,6 +51,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             playerInfos.save(playersFile);
         }
     }
+    
+    public PlayerInfoMap getPlayerInfos() {
+        return playerInfos;
+    }
 
     ////////////////////////////////
     // Event Handlers
@@ -60,18 +64,13 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
         load();
         getServer().getPluginManager().registerEvents(this, this);
-
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                placeNextPillarOfDoom();
-            }
-        }.runTaskTimer(this, 10, doomChunkDelay);
+        doomSchedule.start(this);
     }
 
     @Override
     public void onDisable() {
         saveIfNeeded();
+        doomSchedule.stop();
 
         super.onDisable();
     }
@@ -259,24 +258,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onChunkLoad(ChunkLoadEvent e) {
-        Chunk chunk = e.getChunk();
-
-        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
-            scheduleRegeneration(ChunkPosition.of(chunk));
-        }
-    }
-
-    @EventHandler
-    public void onChunkUnload(ChunkUnloadEvent e) {
-        Chunk chunk = e.getChunk();
-
-        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
-            unscheduleRegeneration(ChunkPosition.of(chunk));
-        }
-    }
-
-    @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         //we are going to want to remove this in final build entirely:
         //I'd prefer not overriding something so fundamental to play.
@@ -315,128 +296,4 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             }
         }
     }
-    private List<ChunkPosition> loadedChunks = Lists.newArrayList();
-    private List<ChunkPosition> doomSchedule = Lists.newArrayList();
-    private final Random regenRandom = new Random();
-
-    private void scheduleRegeneration(ChunkPosition where) {
-        loadedChunks.add(where);
-    }
-
-    private void unscheduleRegeneration(ChunkPosition where) {
-        loadedChunks.remove(where);
-    }
-
-    private void placeNextPillarOfDoom() {
-        if (!loadedChunks.isEmpty()) {
-            if (doomSchedule.isEmpty()) {
-                prepareDoomSchedule();
-            }
-
-            if (!doomSchedule.isEmpty()) {
-                ChunkPosition where = doomSchedule.get(0);
-                if (!playerInfos.getHomeChunks().contains(where)) {
-                    placePillarOfDoom(where);
-                    doomSchedule.remove(0);
-                } else {
-                    doomSchedule.remove(0);
-                }
-                //we need to remove the entry whether or not we placed a pillar
-                //because if it's a home chunk, otherwise it freezes
-            }
-        }
-    }
-
-    private void prepareDoomSchedule() {
-        switch (regenRandom.nextInt(4)) {
-            case 0:
-                prepareDoomScheduleX(true);
-                break;
-
-            case 1:
-                prepareDoomScheduleX(false);
-                break;
-
-            case 2:
-                prepareDoomScheduleZ(true);
-                break;
-
-            case 3:
-                prepareDoomScheduleZ(false);
-                break;
-
-            default:
-                throw new IllegalStateException("This can't happen!");
-        }
-    }
-
-    private void prepareDoomScheduleX(boolean reversed) {
-        int index = regenRandom.nextInt(loadedChunks.size());
-
-        int z = loadedChunks.get(index).z;
-
-        for (ChunkPosition pos : loadedChunks) {
-            if (pos.z == z) {
-                doomSchedule.add(pos);
-            }
-        }
-
-        if (reversed) {
-            Collections.sort(doomSchedule, Collections.reverseOrder());
-        } else {
-            Collections.sort(doomSchedule);
-        }
-    }
-
-    private void prepareDoomScheduleZ(boolean reversed) {
-        int index = regenRandom.nextInt(loadedChunks.size());
-
-        int x = loadedChunks.get(index).x;
-
-        for (ChunkPosition pos : loadedChunks) {
-            if (pos.x == x) {
-                doomSchedule.add(pos);
-            }
-        }
-
-        if (reversed) {
-            Collections.sort(doomSchedule, Collections.reverseOrder());
-        } else {
-            Collections.sort(doomSchedule);
-        }
-    }
-
-    private void placePillarOfDoom(final ChunkPosition where) {
-        System.out.println(String.format(
-                "Doom at %d, %d", where.x * 16, where.z * 16));
-
-        for (int i = 0; i < 16; ++i) {
-            final boolean isLastOne = i == 15;
-            final int top = ((16 - i) * 16) - 1;
-
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (isLastOne) {
-                        World world = where.getWorld(getServer());
-                        world.regenerateChunk(where.x, where.z);
-                    } else {
-
-                        World world = where.getWorld(getServer());
-                        int startX = (where.x * 16) + 8;
-                        int startZ = (where.z * 16) + 8;
-                        for (int y = top - 15; y <= top; ++y) {
-
-                            Location loc = new Location(world, startX, y, startZ);
-                            Block block = world.getBlockAt(loc);
-                            block.setType(Material.LAVA);
-                            world.playSound(loc, Sound.AMBIENCE_THUNDER, 0.5f, 10f);
-                        }
-                    }
-                }
-            }.runTaskLater(this, i * doomCubeDelay);
-        }
-    }
-    private final int doomCubeDelay = 8;
-    private final int doomChunkDelay = doomCubeDelay * 32;
 }
