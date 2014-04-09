@@ -39,12 +39,12 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * This delay is how many ticks we wait between segments of the doom
      * pillars.
      */
-    private final int doomSegmentDelay = 8;
+    private final int doomSegmentDelay = 32;
     /**
      * This delay is how long we wait between doom pillars; we compute this to
      * be long enough that only one pillar at a time is in play.
      */
-    private final int doomChunkDelay = doomSegmentDelay * 32;
+    private final int doomChunkDelay = doomSegmentDelay * 16;
 
     /**
      * This method is called to start the task; it schedules it to run
@@ -144,6 +144,10 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
                 block.setType(Material.LAVA);
                 world.playSound(loc, Sound.AMBIENCE_THUNDER, 0.5f, 10f);
             }
+
+            Location thunderLoc = new Location(world, centerX, top, centerZ);
+            float thunderPitch = (0.5f + (top / 512));
+            world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 8.0f, thunderPitch);
 
             placeSegmentOfDoomLater(where, chunkY - 1);
         }
