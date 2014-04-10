@@ -40,7 +40,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * This delay is how many ticks we wait between segments of the doom
      * pillars.
      */
-    private final int doomSegmentDelay = 32;
+    private final int doomSegmentDelay = 16;
     /**
      * This delay is how long we wait between doom pillars; we compute this to
      * be long enough that only one pillar at a time is in play.
@@ -80,12 +80,11 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!plugin.getPlayerInfos().getHomeChunks().contains(where)) {
-                    System.out.println(String.format(
-                            "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
-
+                    //System.out.println(String.format(
+                    //      "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
+                    // Removed server log message because placing is so constant
                     placeSegmentOfDoomLater(where, 15);
                 }
-
                 //we need to remove the entry whether or not we placed a pillar
                 //because if it's a home chunk, otherwise it freezes
                 doomSchedule.remove(0);
@@ -143,7 +142,6 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
                 Location loc = new Location(world, centerX, y, centerZ);
                 Block block = world.getBlockAt(loc);
                 block.setType(Material.LAVA);
-                world.playSound(loc, Sound.AMBIENCE_THUNDER, 0.5f, 10f);
             }
 
             Location thunderLoc = new Location(world, centerX, top, centerZ);
