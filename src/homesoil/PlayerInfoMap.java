@@ -18,7 +18,9 @@ public final class PlayerInfoMap {
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
     private int homeChunksGenCount = 0;
-    private static final int spawnRadiusInChunks = 64;
+    private int numberOfHomeChunks = this.getHomeChunks().size();
+    private int spawnRadiusInChunks = (int) (Math.sqrt(numberOfHomeChunks)*6.4);
+    //64 gives about a -1000 to 1000 range
     private final Random random = new Random();
 
     /**
