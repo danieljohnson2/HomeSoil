@@ -14,6 +14,10 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.*;
 import org.bukkit.scheduler.*;
 
+// TODO: better messages fro chunk entry (everyone sees them!)
+// TODO: when you steal one of many chunks, replace the lost one for the victim.
+// TODO: give the player snowballs on spawn/respawn
+
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
