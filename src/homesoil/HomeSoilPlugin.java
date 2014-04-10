@@ -325,7 +325,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
                     if (isHome) {
                         int chunkNo = homes.indexOf(toChunk);
-                        player.chat(String.format("This is §lyour§r home chunk (#%d of %d)",
+                        player.chat(String.format("In my home chunk (#%d of %d)",
                                 chunkNo + 1,
                                 homes.size()));
                     }
