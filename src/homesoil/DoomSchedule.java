@@ -14,6 +14,7 @@ import org.bukkit.event.world.*;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.*;
 
+// TODO: we need to respawn the chunk with the lava pillar in it on server restart.
 /**
  * DoomSchedule regenerates the world, a chunk at a time. Each chunk is filled
  * with a Warning- presently a stream of lava- before it is regenerated. Home
