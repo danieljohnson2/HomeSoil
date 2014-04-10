@@ -24,7 +24,7 @@ import org.bukkit.scheduler.*;
  * guaranteed to hit every chunk; it passes through a random x or z row, then
  * picks another.
  *
- * @author DanJ and AppleJinx
+ * @author DanJ and Applejinx
  */
 public final class DoomSchedule extends BukkitRunnable implements Listener {
 
@@ -40,7 +40,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * This delay is how many ticks we wait between segments of the doom
      * pillars.
      */
-    private final int doomSegmentDelay = 16;
+    private final int doomSegmentDelay = 18;
     /**
      * This delay is how long we wait between doom pillars; we compute this to
      * be long enough that only one pillar at a time is in play.
@@ -80,8 +80,8 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!plugin.getPlayerInfos().getHomeChunks().contains(where)) {
-                    //System.out.println(String.format(
-                    //      "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
+                    System.out.println(String.format(
+                          "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
                     // Removed server log message because placing is so constant
                     placeSegmentOfDoomLater(where, 15);
                 }
