@@ -18,9 +18,6 @@ public final class PlayerInfoMap {
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
     private int homeChunksGenCount = 0;
-    private int numberOfHomeChunks = this.getHomeChunks().size();
-    private int spawnRadiusInChunks = (int) (Math.sqrt(numberOfHomeChunks)*6.4);
-    //64 gives about a -1000 to 1000 range
     private final Random random = new Random();
 
     /**
@@ -186,7 +183,6 @@ public final class PlayerInfoMap {
     }
 
     // TODO: comment
-    
     public String identifyChunkOwner(ChunkPosition position) {
         if (getHomeChunks().contains(position)) {
             for (Map.Entry<String, PlayerInfo> e : infos.entrySet()) {
@@ -291,6 +287,10 @@ public final class PlayerInfoMap {
      */
     private ChunkPosition getInitialChunkPosition(World world) {
         Set<ChunkPosition> oldHomes = getHomeChunks();
+        int numberOfHomeChunks = oldHomes.size();
+        int spawnRadiusInChunks = Math.max(1, (int) (Math.sqrt(numberOfHomeChunks) * 6.4));
+
+        //64 gives about a -1000 to 1000 range
 
         for (;;) {
             int x = random.nextInt(spawnRadiusInChunks * 2) - spawnRadiusInChunks;
