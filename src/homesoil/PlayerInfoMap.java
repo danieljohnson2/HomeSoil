@@ -288,9 +288,9 @@ public final class PlayerInfoMap {
     private ChunkPosition getInitialChunkPosition(World world) {
         Set<ChunkPosition> oldHomes = getHomeChunks();
         int numberOfHomeChunks = oldHomes.size();
-        int spawnRadiusInChunks = Math.max(1, (int) (Math.sqrt(numberOfHomeChunks) * 6.4));
+        int spawnRadiusInChunks = Math.max(1, (int) (Math.sqrt(numberOfHomeChunks) * 16));
 
-        //64 gives about a -1000 to 1000 range
+        //64 output (sixteen discrete homechunks) gives about a -1000 to 1000 maximum range
 
         for (;;) {
             int x = random.nextInt(spawnRadiusInChunks * 2) - spawnRadiusInChunks;
