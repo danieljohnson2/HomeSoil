@@ -129,8 +129,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     if (numberOfFireworks > 0) {
                         launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
-                }
-                else {
+                } else {
                     shooter.setHealth(shooter.getMaxHealth());
                     //bump up shooter health to full, because
                     //they are sacrificing their chunk for a health buff
@@ -320,15 +319,14 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 List<ChunkPosition> homes = playerInfos.get(player).getHomeChunks();
 
                 boolean isHome = homes.contains(toChunk);
-                boolean isLeaving = !fromPlayerName.isEmpty();
+                //boolean isLeaving = !fromPlayerName.isEmpty();
                 boolean isEntering = !toPlayerName.isEmpty();
 
-                if (isLeaving) {
-                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
-                }
+                //if (isLeaving) {
+                //    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
+                //}
 
                 if (isEntering) {
-                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
 
                     if (isHome) {
                         int chunkNo = homes.indexOf(toChunk);
@@ -342,6 +340,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                             "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
                                             chunkNo + 1,
                                             homes.size());
+                                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
+
                                 } else {
                                     msg = String.format(
                                             "§e%s has entered home chunk #%d of %d§r",
