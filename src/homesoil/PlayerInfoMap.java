@@ -182,7 +182,13 @@ public final class PlayerInfoMap {
         return b.build();
     }
 
-    // TODO: comment
+    /**
+     * This obtains the name of the owner of the chunk indicated; if nobody owns
+     * the chunk this returns the empty string.
+     *
+     * @param position The chunk to be checked.
+     * @return The name of the chunk owner, or "".
+     */
     public String identifyChunkOwner(ChunkPosition position) {
         if (getHomeChunks().contains(position)) {
             for (Map.Entry<String, PlayerInfo> e : infos.entrySet()) {
