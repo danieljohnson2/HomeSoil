@@ -14,9 +14,7 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.*;
 import org.bukkit.scheduler.*;
 
-// TODO: better messages fro chunk entry (everyone sees them!)
 // TODO: when you steal one of many chunks, replace the lost one for the victim.
-// TODO: give the player snowballs on spawn/respawn
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -288,11 +286,15 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
             saveIfNeeded();
         }
+
+        bestowSnowball(player);
     }
 
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
-        e.setRespawnLocation(playerInfos.getPlayerStart(e.getPlayer()));
+        Player player = e.getPlayer();
+        bestowSnowball(player);
+        e.setRespawnLocation(playerInfos.getPlayerStart(player));
     }
 
     @EventHandler
@@ -326,17 +328,24 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     if (isHome) {
                         int chunkNo = homes.indexOf(toChunk);
 
-                        player.sendMessage(String.format("This is §lyour§r home chunk (#%d of %d)",
-                                chunkNo + 1,
-                                homes.size()));
-
                         for (World world : getServer().getWorlds()) {
-                            for (Player other : world.getPlayers()) {
-                                other.sendMessage(String.format(
-                                        "%s has entered home chunk #%d of %d",
-                                        player.getName(),
-                                        chunkNo + 1,
-                                        homes.size()));
+                            for (Player recipient : world.getPlayers()) {
+                                String msg;
+
+                                if (player == recipient) {
+                                    msg = String.format(
+                                            "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
+                                            chunkNo + 1,
+                                            homes.size());
+                                } else {
+                                    msg = String.format(
+                                            "§e%s has entered home chunk #%d of %d§r",
+                                            player.getName(),
+                                            chunkNo + 1,
+                                            homes.size());
+                                }
+
+                                recipient.sendMessage(msg);
                             }
                         }
                     }
