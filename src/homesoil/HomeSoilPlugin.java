@@ -130,6 +130,11 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
                 }
+                else {
+                    shooter.setMaxHealth(20.0);
+                    //bump up shooter health to full, because
+                    //they are sacrificing their chunk for a health buff
+                }
             }
         }
     }
