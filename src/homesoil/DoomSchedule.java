@@ -201,7 +201,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             for (int y = top - 16; y < top; ++y) {
                 Location loc = new Location(world, centerX, y, centerZ);
                 Block block = world.getBlockAt(loc);
-                block.setType(Material.OBSIDIAN);
+                block.setType(Material.REDSTONE_LAMP_ON);
             }
 
             Location thunderLoc = new Location(world, centerX, top, centerZ);
