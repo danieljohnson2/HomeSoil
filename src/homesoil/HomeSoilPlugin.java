@@ -17,7 +17,6 @@ import org.bukkit.scheduler.*;
 // TODO: better messages fro chunk entry (everyone sees them!)
 // TODO: when you steal one of many chunks, replace the lost one for the victim.
 // TODO: give the player snowballs on spawn/respawn
-
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -27,8 +26,9 @@ import org.bukkit.scheduler.*;
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     private static final File playersFile = new File("HomeSoil.txt");
+    private static final File regenFile = new File("HomeSoilDoom.txt");
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
-    private final DoomSchedule doomSchedule = new DoomSchedule(this);
+    private final DoomSchedule doomSchedule = new DoomSchedule(this, regenFile);
 
     /**
      * This method provides access to the player info so we can move some logic
@@ -70,7 +70,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
         load();
         getServer().getPluginManager().registerEvents(this, this);
-        doomSchedule.start(this);
+        doomSchedule.start();
     }
 
     @Override

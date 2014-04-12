@@ -1,4 +1,3 @@
 name: HomeSoil
 main: homesoil.HomeSoilPlugin
 version: 0.1
-load: STARTUP

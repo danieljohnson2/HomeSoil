@@ -6,6 +6,7 @@ package homesoil;
 
 import com.google.common.base.*;
 import com.google.common.collect.*;
+import java.io.*;
 import java.util.*;
 import org.bukkit.*;
 import org.bukkit.block.*;
@@ -14,7 +15,6 @@ import org.bukkit.event.world.*;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.*;
 
-// TODO: we need to respawn the chunk with the lava pillar in it on server restart.
 /**
  * DoomSchedule regenerates the world, a chunk at a time. Each chunk is filled
  * with a Warning- presently a stream of lava- before it is regenerated. Home
@@ -28,10 +28,12 @@ import org.bukkit.scheduler.*;
  */
 public final class DoomSchedule extends BukkitRunnable implements Listener {
 
+    private final File regenFile;
     private final HomeSoilPlugin plugin;
 
-    public DoomSchedule(HomeSoilPlugin plugin) {
+    public DoomSchedule(HomeSoilPlugin plugin, File regenFile) {
         this.plugin = Preconditions.checkNotNull(plugin);
+        this.regenFile = Preconditions.checkNotNull(regenFile);
     }
     ////////////////////////////////////////////////////////////////
     // Scheduling
@@ -55,9 +57,19 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * @param plugin The plugin object for home soil; we register events with
      * this.
      */
-    public void start(Plugin plugin) {
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    public void start() {
+        Server server = plugin.getServer();
+        server.getPluginManager().registerEvents(this, plugin);
         runTaskTimer(plugin, 10, doomChunkDelay);
+
+        for (ChunkPosition where : loadDoomedChunks()) {
+            System.out.println(String.format(
+                    "Regenerating leftover chunk at %d, %d",
+                    where.x * 16 + 8, where.z * 16 + 8));
+
+            World world = where.getWorld(server);
+            world.regenerateChunk(where.x, where.z);
+        }
     }
 
     /**
@@ -68,6 +80,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     public void stop() {
         cancel();
         HandlerList.unregisterAll(this);
+        saveDoomedChunks();
     }
 
     @Override
@@ -80,10 +93,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!plugin.getPlayerInfos().getHomeChunks().contains(where)) {
-                    System.out.println(String.format(
-                          "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
-                    // Removed server log message because placing is so constant
-                    placeSegmentOfDoomLater(where, 15);
+                    beginSegmentOfDoom(where);
                 }
                 //we need to remove the entry whether or not we placed a pillar
                 //because if it's a home chunk, otherwise it freezes
@@ -94,6 +104,54 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     ////////////////////////////////////////////////////////////////
     // Pillars of Doom
     //
+    private final Set<ChunkPosition> doomedChunks = Sets.newHashSet();
+
+    /**
+     * This method starts the process of regenerating a chunk; it records the
+     * chunk as 'doomed' in the doomed chunk file, and kicks off the lava
+     * pillar.
+     *
+     * @param where The chunk that is doomed.
+     */
+    private void beginSegmentOfDoom(ChunkPosition where) {
+        if (doomedChunks.add(where)) {
+            System.out.println(String.format(
+                    "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
+
+            placeSegmentOfDoomLater(where, 15);
+            saveDoomedChunks();
+        }
+    }
+
+    /**
+     * This writes the set of doomed chunks out to a file. Recording these
+     * chunks lets us regenerate them when the server restarts; this way we
+     * don't leave abandoned doom pillars all over.
+     */
+    private void saveDoomedChunks() {
+        MapFileMap map = new MapFileMap();
+        map.put("doomed", ImmutableList.copyOf(doomedChunks));
+        MapFileMap.write(regenFile, map);
+    }
+
+    /**
+     * This reads teh set of doomed chunks from the regen file; this does not
+     * update 'doomedChunks', however; we instead regenerate them at once. This
+     * is used at plugin startup.
+     *
+     * We do this so we don't leave abandoned doom pillars behind when the
+     * server restarts.
+     *
+     * @return The retrieved chunks that are doomed.
+     */
+    private Set<ChunkPosition> loadDoomedChunks() {
+        if (regenFile.exists()) {
+            MapFileMap map = MapFileMap.read(regenFile);
+            return ImmutableSet.copyOf(map.getList("doomed", ChunkPosition.class));
+        } else {
+            return Collections.emptySet();
+        }
+    }
 
     /**
      * This method does not do anything now, but schedules a segment of the
@@ -133,6 +191,9 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
 
         if (chunkY <= 0) {
             world.regenerateChunk(where.x, where.z);
+            if (doomedChunks.remove(where)) {
+                saveDoomedChunks();
+            }
         } else {
             int top = chunkY * 16;
             int centerX = (where.x * 16) + 8;
