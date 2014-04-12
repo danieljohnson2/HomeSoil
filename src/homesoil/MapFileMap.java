@@ -466,13 +466,28 @@ public final class MapFileMap extends HashMap<String, Object> {
      * and all values that are not maps are also so converted. Values can
      * contain maps, which are preserved.
      *
+     * This method tries to write a temp file and rename it over the original;
+     * on typical modern file-system, this makes the update atomic. If the rename
+     * fails (ie, if the original is locked), we will rewrite the file directly
+     * if we can.
+     *
      * @param file The file to write to.
      * @param map The map to encode.
      */
     public static void write(File file, Map<?, ?> map) {
+        File tempFile = new File(file.getParentFile(), file.getName() + ".tmp");
+
         try {
             String text = Joiner.on(NEW_LINE).join(getLinesFromMap(map));
-            Files.write(text, file, Charsets.UTF_8);
+            Files.write(text, tempFile, Charsets.UTF_8);
+
+            boolean renamed = tempFile.renameTo(file);
+
+            if (!renamed) {
+                tempFile.delete();
+
+                Files.write(text, file, Charsets.UTF_8);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
