@@ -86,8 +86,9 @@ public final class MapFileMap extends HashMap<String, Object> {
     }
 
     /**
-     * This method returns a value as a list; if the value is not a list, but is
-     * map, this method will try to convert it by treating the keys as indices.
+     * This method returns a value as a list; it will convert other collections
+     * to lists by copying the elements. If the value is not a list, but is map,
+     * this method will try to convert it by treating the keys as indices.
      *
      * @param key The key of the value.
      * @return The value as a list; may be a copy of the list within.
@@ -113,15 +114,17 @@ public final class MapFileMap extends HashMap<String, Object> {
             }
 
             return list;
+        } else if (value instanceof Collection<?>) {
+            return Lists.newArrayList((Collection<?>) value);
         }
 
         throw new ClassCastException(String.format("The value for '%s' is not a list.", key));
     }
 
     /**
-     * This method returns a value as a list; if the value is not a list, but is
-     * map, this method will try to convert it by treating the keys as indices.
-     * This method converts each element of the list as well.
+     * This method returns a value as a list; it will convert other collections
+     * to lists by copying the elements. If the value is not a list, but is map,
+     * this method will try to convert it by treating the keys as indices.
      *
      * @param key The key of the value.
      * @param itemClass The type of the individual elements.
@@ -130,6 +133,58 @@ public final class MapFileMap extends HashMap<String, Object> {
      */
     public <T extends Storable> List<T> getList(String key, Class<T> itemClass) {
         ArrayList<T> b = Lists.newArrayList();
+
+        for (Object item : getList(key)) {
+            b.add(convertValue(item, itemClass));
+        }
+
+        return b;
+    }
+
+    /**
+     * This method returns a value as a set; it will convert other collections
+     * to sets by copying the elements. If the value is not a set, but is map,
+     * this method will try to convert it using only the values; the keys are
+     * ignored.
+     *
+     * @param key The key of the value.
+     * @return The value as a set; may be a copy of the set within.
+     * @throws IllegalArgumentException If the key is not found.
+     */
+    public Set<?> getSet(String key) {
+        Object value = getObject(key);
+
+        if (value instanceof Set<?>) {
+            return (Set<?>) value;
+        } else if (value instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) value;
+            Set<Object> set = Sets.newHashSet();
+
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                set.add(e.getValue());
+            }
+
+            return set;
+        } else if (value instanceof Collection<?>) {
+            return Sets.newHashSet((Collection<?>) value);
+        }
+
+        throw new ClassCastException(String.format("The value for '%s' is not a set.", key));
+    }
+
+    /**
+     * This method returns a value as a set; it will convert other collections
+     * to sets by copying the elements. If the value is not a set, but is map,
+     * this method will try to convert it using only the values; the keys are
+     * ignored.
+     *
+     * @param key The key of the value.
+     * @param itemClass The type of the individual elements.
+     * @return The value as a set; always a copy of the set within.
+     * @throws IllegalArgumentException If the key is not found.
+     */
+    public <T extends Storable> Set<T> getSet(String key, Class<T> itemClass) {
+        Set<T> b = Sets.newHashSet();
 
         for (Object item : getList(key)) {
             b.add(convertValue(item, itemClass));
@@ -242,18 +297,20 @@ public final class MapFileMap extends HashMap<String, Object> {
     }
 
     /**
-     * This converts a list into a list of lines you can save. These lines look
-     * like a map's output, with the indices used as keys. You'll get a map back
-     * when you read it back in.
+     * This converts a collection into a list of lines you can save. These lines
+     * look like a map's output, with the indices used as keys. You'll get a map
+     * back when you read it back in.
      *
-     * @param list The list to be converted.
-     * @return The list converted to text, as lines.
+     * @param source The collection to be converted.
+     * @return The collection converted to text, as lines.
      */
-    public static List<String> getLinesFromList(List<?> list) {
+    public static List<String> getLinesFromCollection(Collection<?> source) {
         ImmutableList.Builder<String> b = ImmutableList.builder();
 
-        for (int index = 0; index < list.size(); ++index) {
-            buildLinesFromMapEntry(b, index, list.get(index));
+        int index = 0;
+        for (Object element : source) {
+            buildLinesFromMapEntry(b, index, element);
+            ++index;
         }
 
         return b.build();
@@ -319,10 +376,10 @@ public final class MapFileMap extends HashMap<String, Object> {
             destination.add(String.format("%s=[", escape(key.toString())));
             destination.addAll(getLinesFromMap(submap));
             destination.add("]");
-        } else if (value instanceof List<?>) {
-            List<?> sublist = (List<?>) value;
+        } else if (value instanceof Collection<?>) {
+            Collection<?> sublist = (Collection<?>) value;
             destination.add(String.format("%s=[", escape(key.toString())));
-            destination.addAll(getLinesFromList(sublist));
+            destination.addAll(getLinesFromCollection(sublist));
             destination.add("]");
         } else {
             destination.add(String.format("%s=%s", escape(key.toString()), escape(value.toString())));

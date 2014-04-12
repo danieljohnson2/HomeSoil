@@ -12,7 +12,6 @@ import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.event.*;
 import org.bukkit.event.world.*;
-import org.bukkit.plugin.*;
 import org.bukkit.scheduler.*;
 
 /**
@@ -130,12 +129,12 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      */
     private void saveDoomedChunks() {
         MapFileMap map = new MapFileMap();
-        map.put("doomed", ImmutableList.copyOf(doomedChunks));
+        map.put("doomed", doomedChunks);
         MapFileMap.write(regenFile, map);
     }
 
     /**
-     * This reads teh set of doomed chunks from the regen file; this does not
+     * This reads the set of doomed chunks from the regen file; this does not
      * update 'doomedChunks', however; we instead regenerate them at once. This
      * is used at plugin startup.
      *
@@ -147,7 +146,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     private Set<ChunkPosition> loadDoomedChunks() {
         if (regenFile.exists()) {
             MapFileMap map = MapFileMap.read(regenFile);
-            return ImmutableSet.copyOf(map.getList("doomed", ChunkPosition.class));
+            return map.getSet("doomed", ChunkPosition.class);
         } else {
             return Collections.emptySet();
         }
