@@ -1,10 +1,11 @@
 package homesoil;
 
+import static com.google.common.base.Objects.*;
 import com.google.common.collect.*;
 import java.io.*;
 import java.util.*;
 import org.bukkit.*;
-import org.bukkit.block.Block;
+import org.bukkit.block.*;
 import org.bukkit.entity.*;
 
 /**
@@ -16,8 +17,8 @@ import org.bukkit.entity.*;
 public final class PlayerInfoMap {
 
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
-    private final Set<ChunkPosition> homeChunks = Sets.newHashSet();
-    private int homeChunksGenCount = 0;
+    private final Map<ChunkPosition, String> homeChunkOwners = Maps.newHashMap();
+    private int homeChunkOwnersGenCount = 0;
     private final Random random = new Random();
 
     /**
@@ -96,19 +97,43 @@ public final class PlayerInfoMap {
      * @return An immutable set of chunks that are occupied by a player..
      */
     public Set<ChunkPosition> getHomeChunks() {
+        updateHomeChunkOwnersIfNeeded();
+        return homeChunkOwners.keySet();
+    }
+
+    /**
+     * This obtains the name of the owner of the chunk indicated; if nobody owns
+     * the chunk this returns the empty string.
+     *
+     * @param position The chunk to be checked.
+     * @return The name of the chunk owner, or "".
+     */
+    public String identifyChunkOwner(ChunkPosition position) {
+        updateHomeChunkOwnersIfNeeded();
+        return firstNonNull(homeChunkOwners.get(position), "");
+    }
+
+    /**
+     * This method checks the gen count to see if the home chunk owners map must
+     * be regenerated, and if it needs to, it regenerates that map.
+     */
+    private void updateHomeChunkOwnersIfNeeded() {
         int currentGenCount = PlayerInfo.getGenerationCount();
 
-        if (homeChunksGenCount != currentGenCount) {
-            homeChunksGenCount = currentGenCount;
+        if (homeChunkOwnersGenCount != currentGenCount) {
+            homeChunkOwnersGenCount = currentGenCount;
 
-            homeChunks.clear();
+            homeChunkOwners.clear();
 
-            for (PlayerInfo info : infos.values()) {
-                homeChunks.addAll(info.getHomeChunks());
+            for (Map.Entry<String, PlayerInfo> e : infos.entrySet()) {
+                String playerName = e.getKey();
+                PlayerInfo info = e.getValue();
+
+                for (ChunkPosition homeChunk : info.getHomeChunks()) {
+                    homeChunkOwners.put(homeChunk, playerName);
+                }
             }
         }
-
-        return homeChunks;
     }
 
     ////////////////////////////////
@@ -180,26 +205,6 @@ public final class PlayerInfoMap {
         }
 
         return b.build();
-    }
-
-    /**
-     * This obtains the name of the owner of the chunk indicated; if nobody owns
-     * the chunk this returns the empty string.
-     *
-     * @param position The chunk to be checked.
-     * @return The name of the chunk owner, or "".
-     */
-    public String identifyChunkOwner(ChunkPosition position) {
-        if (getHomeChunks().contains(position)) {
-            for (Map.Entry<String, PlayerInfo> e : infos.entrySet()) {
-                PlayerInfo info = e.getValue();
-                if (info.getHomeChunks().contains(position)) {
-                    return e.getKey();
-                }
-            }
-        }
-
-        return "";
     }
 
     /**
