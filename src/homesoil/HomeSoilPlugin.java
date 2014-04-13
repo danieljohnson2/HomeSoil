@@ -24,8 +24,10 @@ import org.bukkit.scheduler.*;
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
     private static final File playersFile = new File("HomeSoil.txt");
+    private static final File historyFile = new File("HomeSoilHistory.txt");
     private static final File regenFile = new File("HomeSoilDoom.txt");
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
+    private final PlayerInfoMap historyInfos = new PlayerInfoMap();
     private final DoomSchedule doomSchedule = new DoomSchedule(this, regenFile);
 
     /**
@@ -38,6 +40,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         return playerInfos;
     }
 
+    public PlayerInfoMap getHistoryInfos() {
+        return historyInfos;
+    }
+
     /**
      * This method loads player data from the HomeSoil file.
      */
@@ -46,6 +52,10 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
         if (playersFile.exists()) {
             playerInfos.load(playersFile);
+        }
+
+        if (historyFile.exists()) {
+            historyInfos.load(historyFile);
         }
     }
 
@@ -57,6 +67,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         if (playerInfos.shouldSave()) {
             getLogger().info("Saving HomeSoil State");
             playerInfos.save(playersFile);
+            historyInfos.save(historyFile);
         }
     }
 
@@ -122,6 +133,11 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
+                    PlayerInfo historicalRecord = historyInfos.get(shooter);
+                    historicalRecord.addHomeChunk(victimChunk);
+                    //here we parallel the existing playerInfos with historyInfos
+                    //so we always add new chunk acquisitions to both
+
                     int numberOfFireworks = shooterInfo.getHomeChunks().size();
 
                     //here, we play a server message to everyone on the server
@@ -135,10 +151,13 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
                 } else {
+                    //it's a takeover but victim == shooter, so we remove the chunk from both lists
+                    //if it's not a scuttle, chunk STAYS in victim's history
+                    historyInfos.removeHomeChunk(victim, victimChunk, getServer());
+
                     shooter.setHealth(shooter.getMaxHealth());
                     //bump up shooter health to full, because
                     //they are sacrificing their chunk for a health buff
-                    //note: this does not work yet, tried it.
                 }
             }
         }
@@ -325,12 +344,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 List<ChunkPosition> homes = playerInfos.get(player).getHomeChunks();
 
                 boolean isHome = homes.contains(toChunk);
-                //boolean isLeaving = !fromPlayerName.isEmpty();
                 boolean isEntering = !toPlayerName.isEmpty();
-
-                //if (isLeaving) {
-                //    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
-                //}
 
                 if (isEntering) {
 
@@ -347,7 +361,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                             homes.size());
                                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
                                     recipient.sendMessage(msg);
-                                    //this is no longer a global message: simplify? We send it only to 'player' now.
+                                    //###this is no longer a global message: simplify? We send it only to 'player' now.
                                 }
                             }
                         }
