@@ -321,35 +321,43 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
             if (!fromPlayerName.equals(toPlayerName)) {
                 Player player = e.getPlayer();
+                PlayerInfo playerInfo = playerInfos.get(player);
 
-                List<ChunkPosition> homes = playerInfos.get(player).getHomeChunks();
-
-                boolean isHome = homes.contains(toChunk);
-                //boolean isLeaving = !fromPlayerName.isEmpty();
                 boolean isEntering = !toPlayerName.isEmpty();
+                boolean isEnteringFormerHome = isEntering && playerInfo.getHistoricalHomeChunks().contains(toChunk);
 
-                //if (isLeaving) {
-                //    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
-                //}
+                if (fromPlayerName.equals(player.getName())) {
+                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
+                }
 
                 if (isEntering) {
+                    OfflinePlayer toPlayer = getServer().getOfflinePlayer(toPlayerName);
 
-                    if (isHome) {
+                    if (toPlayer != null && playerInfos.isKnown(toPlayer)) {
+                        PlayerInfo toInfo = playerInfos.get(toPlayer);
+                        List<ChunkPosition> homes = toInfo.getHomeChunks();
                         int chunkNo = homes.indexOf(toChunk);
 
-                        for (World world : getServer().getWorlds()) {
-                            for (Player recipient : world.getPlayers()) {
-                                String msg;
-                                if (player == recipient) {
-                                    msg = String.format(
-                                            "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
-                                            chunkNo + 1,
-                                            homes.size());
-                                    player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
-                                    recipient.sendMessage(msg);
-                                    //this is no longer a global message: simplify? We send it only to 'player' now.
-                                }
-                            }
+                        String msg = null;
+
+                        if (toPlayer.getPlayer() == player) {
+                            // silly rabbit, clicks are for kids! (sorry)
+                            player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
+
+                            msg = String.format(
+                                    "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
+                                    chunkNo + 1,
+                                    homes.size());
+                        } else if (isEnteringFormerHome) {
+                            msg = String.format(
+                                    "§6This is §l%s's§r§6 home chunk (#%d of %d)§r",
+                                    toPlayerName,
+                                    chunkNo + 1,
+                                    homes.size());
+                        }
+
+                        if (msg != null) {
+                            player.sendMessage(msg);
                         }
                     }
                 }

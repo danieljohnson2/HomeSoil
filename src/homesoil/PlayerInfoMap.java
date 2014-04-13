@@ -170,14 +170,17 @@ public final class PlayerInfoMap {
      */
     public Location getPlayerStart(OfflinePlayer player, World world, Server server) {
         PlayerInfo info = get(player);
-        ChunkPosition homeChunk = info.pickHomeChunk(random);
-        Location spawn = findPlayerStartOrNull(homeChunk, server, true);
 
-        if (spawn != null) {
-            return spawn;
-        } else {
-            return pickNewHomeChunk(world, server, info);
+        if (!info.getHomeChunks().isEmpty()) {
+            ChunkPosition homeChunk = info.pickHomeChunk(random);
+            Location spawn = findPlayerStartOrNull(homeChunk, server, true);
+
+            if (spawn != null) {
+                return spawn;
+            }
         }
+
+        return pickNewHomeChunk(world, server, info);
     }
 
     /**

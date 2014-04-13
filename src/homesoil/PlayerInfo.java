@@ -21,6 +21,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
     ////////////////////////////////
     // Home Chunks
     private List<ChunkPosition> homeChunks = Collections.emptyList();
+    private final Set<ChunkPosition> historicalHomeChunks = Sets.newHashSet();
 
     /**
      * This method returns an immutable list that contains each home chunk
@@ -34,6 +35,16 @@ public final class PlayerInfo implements MapFileMap.Storable {
     }
 
     /**
+     * This method returns a set containing every chunk this player has ever
+     * owned, even if he does not own the chunk anymore.
+     *
+     * @return An unmodifiable set of the chunks.
+     */
+    public Set<ChunkPosition> getHistoricalHomeChunks() {
+        return Collections.unmodifiableSet(historicalHomeChunks);
+    }
+
+    /**
      * This method assigns a single home chunk to the player; if he had any
      * chunks, they will be removed in favor of this new one.
      *
@@ -41,6 +52,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
      */
     public void setHomeChunk(ChunkPosition homeChunk) {
         homeChunks = ImmutableList.of(homeChunk);
+        historicalHomeChunks.add(homeChunk);
         incrementGenerationCount();
     }
 
@@ -56,6 +68,8 @@ public final class PlayerInfo implements MapFileMap.Storable {
             homeChunks = ImmutableList.copyOf(Iterables.concat(
                     homeChunks,
                     ImmutableList.of(homeChunk)));
+
+            historicalHomeChunks.add(homeChunk);
 
             incrementGenerationCount();
         }
@@ -128,7 +142,14 @@ public final class PlayerInfo implements MapFileMap.Storable {
     ////////////////////////////////
     // MapFileMap Storage
     public PlayerInfo(MapFileMap storage) {
-        this.homeChunks = ImmutableList.copyOf(storage.getList("homes", ChunkPosition.class));
+        if (storage.containsKey("homes")) {
+            this.homeChunks = ImmutableList.copyOf(storage.getList("homes", ChunkPosition.class));
+        }
+
+        if (storage.containsKey("historicalHomes")) {
+            this.historicalHomeChunks.addAll(storage.getSet("historicalHomes", ChunkPosition.class));
+        }
+
         incrementGenerationCount();
     }
 
@@ -136,6 +157,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
     public Map<?, ?> toMap() {
         Map<String, Object> map = Maps.newHashMap();
         map.put("homes", homeChunks);
+        map.put("historicalHomes", historicalHomeChunks);
         return map;
     }
 }
