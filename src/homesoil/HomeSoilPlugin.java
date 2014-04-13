@@ -122,8 +122,13 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
-
                     int numberOfFireworks = shooterInfo.getHomeChunks().size();
+
+                    //here, we play a server message to everyone on the server
+                    //it says, "Foo took over Bar's chunk, and now controls Baz!"
+                    //Foo shooter, Bar victim, Baz numberOfFireworks (before we multiply it)
+
+
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
 
                     if (numberOfFireworks > 0) {
@@ -133,6 +138,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     shooter.setHealth(shooter.getMaxHealth());
                     //bump up shooter health to full, because
                     //they are sacrificing their chunk for a health buff
+                    //note: this does not work yet, tried it.
                 }
             }
         }
@@ -334,7 +340,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         for (World world : getServer().getWorlds()) {
                             for (Player recipient : world.getPlayers()) {
                                 String msg;
-
                                 if (player == recipient) {
                                     msg = String.format(
                                             "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
@@ -342,6 +347,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                             homes.size());
                                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
                                     recipient.sendMessage(msg);
+                                    //this is no longer a global message: simplify? We send it only to 'player' now.
                                 }
                             }
                         }
