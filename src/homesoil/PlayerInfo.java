@@ -97,7 +97,7 @@ public final class PlayerInfo implements MapFileMap.Storable {
     public ChunkPosition pickHomeChunk(Random random) {
         if (homeChunks.isEmpty()) {
             throw new IllegalStateException(
-                    "pickHomeChunks can only be used if at least one chunk is assigned tot he player.");
+                    "pickHomeChunks can only be used if at least one chunk is assigned to the player.");
         }
 
         int index = random.nextInt(homeChunks.size());
