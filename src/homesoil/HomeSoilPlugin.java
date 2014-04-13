@@ -341,16 +341,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                             chunkNo + 1,
                                             homes.size());
                                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
-
-                                } else {
-                                    msg = String.format(
-                                            "§e%s has entered home chunk #%d of %d§r",
-                                            player.getName(),
-                                            chunkNo + 1,
-                                            homes.size());
+                                    recipient.sendMessage(msg);
                                 }
-
-                                recipient.sendMessage(msg);
                             }
                         }
                     }
