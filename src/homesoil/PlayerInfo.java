@@ -100,6 +100,36 @@ public final class PlayerInfo implements MapFileMap.Storable {
     }
 
     /**
+     * This will remove a home chunk from the list of chunks; but it cannot
+     * remove the last chunk. If 'homeChunk' is not actually a home chunk of
+     * this player, this method does nothing but returns true since the chunk is
+     * trivially removed.
+     *
+     * @param homeChunk The chunk to remove.
+     * @return True if the chunk is no longer present; false if it was the last
+     * chunk.
+     */
+    public boolean tryScuttleHomeChunk(ChunkPosition homeChunk) {
+        if (!homeChunks.contains(homeChunk)) {
+            return true; // it was never there, good enough
+        }
+
+        if (homeChunks.size() == 1) {
+            return false; // can't remove last chunk!
+        }
+
+        homeChunks.remove(homeChunk);
+        historicalHomeChunks.remove(homeChunk);
+        //this needs to be able to remove ALL references to the chunk,
+        //in whatever player records they occur, including when multiple players
+        //have a record for the same chunk
+        
+        
+        incrementGenerationCount();
+        return true;
+    }
+
+    /**
      * This method selects one of the home chunks and returns it.
      *
      * @param random The RNG used to pick the chunk.
