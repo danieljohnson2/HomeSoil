@@ -89,19 +89,6 @@ public final class PlayerInfoMap {
         }
     }
 
-    public void scuttleHomeChunk(OfflinePlayer player, ChunkPosition homeChunk, Server server) {
-        // if player is not yet known, there is no point to resetting his home
-        // chunk. This will happen when he logs in!
-
-        if (isKnown(player)) {
-            PlayerInfo info = get(player);
-            if (!info.tryScuttleHomeChunk(homeChunk)) {
-                World world = homeChunk.getWorld(server);
-                pickNewHomeChunk(world, server, info);
-            }
-        }
-    }
-
     /**
      * This method returns a set containing each chunk that is the home for any
      * player. The set is immutable and lazy allocated; a new one is allocated
