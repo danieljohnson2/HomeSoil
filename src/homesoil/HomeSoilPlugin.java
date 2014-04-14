@@ -117,9 +117,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
 
             if (victimInfo.getHomeChunks().contains(victimChunk)) {
+                playerInfos.removeHomeChunk(victim, victimChunk, getServer());
 
                 if (victim.getPlayer() != shooter) {
-                    playerInfos.removeHomeChunk(victim, victimChunk, getServer());
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
                     int numberOfFireworks = shooterInfo.getHomeChunks().size();
@@ -135,10 +135,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
                 } else {
-
-                    playerInfos.scuttleHomeChunk(victim, victimChunk, getServer());
-
-
                     shooter.setHealth(shooter.getMaxHealth());
                     //bump up shooter health to full, because
                     //they are sacrificing their chunk for a health buff
