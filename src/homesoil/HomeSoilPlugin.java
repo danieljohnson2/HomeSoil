@@ -138,7 +138,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     shooter.setHealth(shooter.getMaxHealth());
                     //bump up shooter health to full, because
                     //they are sacrificing their chunk for a health buff
-                    //note: this does not work yet, tried it.
                 }
             }
         }
