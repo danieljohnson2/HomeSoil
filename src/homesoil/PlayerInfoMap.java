@@ -94,11 +94,30 @@ public final class PlayerInfoMap {
      * player. The set is immutable and lazy allocated; a new one is allocated
      * if the player infos are ever changed.
      *
-     * @return An immutable set of chunks that are occupied by a player..
+     * @return An immutable set of chunks that are occupied by a player.
      */
     public Set<ChunkPosition> getHomeChunks() {
         updateHomeChunkOwnersIfNeeded();
         return homeChunkOwners.keySet();
+    }
+
+    /**
+     * This method returns a set containing each chunk that has ever been a home
+     * chunk for anyone, even if it no longer is.
+     *
+     * @return An immutable set of chunks that have ever been occupied.
+     */
+    public Set<ChunkPosition> getHistoricalHomeChunks() {
+        // This is rare enough that I'm sure we don't need to optimize,
+        // so we'll just build the set every time.
+
+        ImmutableSet.Builder<ChunkPosition> b = ImmutableSet.builder();
+
+        for (PlayerInfo info : infos.values()) {
+            b.addAll(info.getHistoricalHomeChunks());
+        }
+
+        return b.build();
     }
 
     /**
@@ -300,11 +319,11 @@ public final class PlayerInfoMap {
      * @param world The world the player will spawn in.
      */
     private ChunkPosition getInitialChunkPosition(World world) {
-        Set<ChunkPosition> oldHomes = getHomeChunks();
-        int numberOfHomeChunks = oldHomes.size();
-        int spawnRadiusInChunks = Math.max(1, (int) (Math.sqrt(numberOfHomeChunks) * 16));
+        Set<ChunkPosition> oldHomes = getHistoricalHomeChunks();
+        int numberOfHistoricalHomeChunks = oldHomes.size();
+        int spawnRadiusInChunks = Math.max(1, (int) (Math.sqrt(numberOfHistoricalHomeChunks) * 16));
 
-        //64 output (sixteen discrete homechunks) gives about a -1000 to 1000 maximum range
+        // 64 output (sixteen discrete homechunks) gives about a -1000 to 1000 maximum range
 
         for (;;) {
             int x = random.nextInt(spawnRadiusInChunks * 2) - spawnRadiusInChunks;
