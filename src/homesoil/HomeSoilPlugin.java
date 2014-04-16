@@ -208,7 +208,17 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim, getServer()));
 
         if (!victimSpawns.isEmpty()) {
+            // ugly, but we can only work with spawns in the same world, so
+            // we translate them all. This relies on getPlayerStarts() returning
+            // clones, which it does, but ew.
+
+            for (Location spawn : victimSpawns) {
+                ChunkPosition.translateToWorld(spawn, projectile.getWorld());
+            }
+
             final Location start = projectile.getLocation().clone();
+            start.add(0, 1, 0);
+            projectile.teleport(start);
 
             class DistanceComparator implements Comparator<Location> {
 
@@ -219,27 +229,14 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     return (int) Math.signum(start.distanceSquared(left) - start.distanceSquared(right));
                 }
             }
+
+            // we target the closest spawn the victim has.
             Collections.sort(victimSpawns, new DistanceComparator());
+            Location destination = victimSpawns.get(0);
 
-            Location victimSpawn = victimSpawns.get(0);
-
-            start.add(0, 1, 0);
-            projectile.teleport(start);
-
-            Location destination = victimSpawn.clone();
-
-            // if a player throws a snowball named after a player, we
-            // change its effect. Since the snowball itself is gone, and the
-            // snowball-projectile is a different thing with no special name,
-            // we'll stash the player info in it.
-
-            // This is also where we reassign home chunks if needed:
-            // the mechanism works on the throw, not the hit (which can
-            // operate normally)
+            // the snowball will be moved by the server updating its position
+            // periodically; this is done in a scheduled task.
             ProjectileDirector.begin(projectile, destination, this);
-            //note: beginning the snowball at destination.y + 1 would be good,
-            //not sure on the specifics of how that's done
-            //ProjectileDirector now handles its own speed as it varies w. distance
         }
     }
 

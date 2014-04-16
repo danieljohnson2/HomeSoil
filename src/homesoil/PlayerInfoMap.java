@@ -210,7 +210,8 @@ public final class PlayerInfoMap {
      *
      * @param player The player whose start locations are wanted.
      * @param server The server that is running.
-     * @return The locations, in the order the home chunks were acquired.
+     * @return The locations, in the order the home chunks were acquired. Each
+     * location is newly allocated.
      */
     public List<Location> getPlayerStarts(OfflinePlayer player, Server server) {
         ImmutableList.Builder<Location> b = ImmutableList.builder();
@@ -240,7 +241,7 @@ public final class PlayerInfoMap {
      * @param picky The method fails if the player would be spawned in water or
      * lava.
      * @return The location to spawn him; null if no suitable location could be
-     * found.
+     * found. This location is not cached, but a new one is always returned.
      */
     private static Location findPlayerStartOrNull(ChunkPosition homeChunk, Server server, boolean picky) {
         World world = homeChunk.getWorld(server);

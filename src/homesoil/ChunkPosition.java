@@ -132,6 +132,40 @@ public final class ChunkPosition implements MapFileMap.Storable, Comparable<Chun
     }
 
     ////////////////////////////////
+    // Utility
+    /**
+     * This method modifies 'location' so that its world is 'newWorld'; the X
+     * and Z co-ordinates are scaled if required.
+     *
+     * @param location The location to change.
+     * @param newWorld The new world that location will have.
+     */
+    public static void translateToWorld(Location location, World newWorld) {
+        World oldWorld = location.getWorld();
+
+        if (oldWorld != newWorld) {
+            location.setWorld(newWorld);
+
+            boolean wasOverworld = oldWorld.getEnvironment() == World.Environment.NETHER.NORMAL;
+            boolean isOverworld = newWorld.getEnvironment() == World.Environment.NETHER.NORMAL;
+
+            final double scaleFactor = 8.0;
+
+            if (wasOverworld != isOverworld) {
+                if (isOverworld) {
+                    // translating out of the nether to the overworld
+                    location.setX(location.getX() * scaleFactor);
+                    location.setZ(location.getZ() * scaleFactor);
+                } else {
+                    // translating into the nether from the ooverworld.
+                    location.setX(location.getX() / scaleFactor);
+                    location.setZ(location.getZ() / scaleFactor);
+                }
+            }
+        }
+    }
+
+    ////////////////////////////////
     // MapFileMap Storage
     public ChunkPosition(MapFileMap map) {
         this.x = map.getInteger("x");
@@ -151,7 +185,9 @@ public final class ChunkPosition implements MapFileMap.Storable, Comparable<Chun
     @Override
     public int compareTo(ChunkPosition other) {
         int cmp = this.x - other.x;
-        if (cmp != 0) return cmp;
+        if (cmp != 0) {
+            return cmp;
+        }
         return this.z - other.z;
     }
 }
