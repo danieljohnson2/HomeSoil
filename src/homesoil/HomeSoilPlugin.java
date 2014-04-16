@@ -14,7 +14,6 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.*;
 import org.bukkit.scheduler.*;
 
-// TODO: when you steal one of many chunks, replace the lost one for the victim.
 /**
  * This is the plugin class itself, which acts as the main entry point for a
  * Bukkit plugin. This also doubles as the listener, and handles events for us.
@@ -127,7 +126,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     //here, we play a server message to everyone on the server
                     //it says, "Foo took over Bar's chunk, and now controls Baz!"
                     //Foo shooter, Bar victim, Baz numberOfFireworks (before we multiply it)
-
 
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
 

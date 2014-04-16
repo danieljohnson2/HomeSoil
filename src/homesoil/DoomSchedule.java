@@ -16,12 +16,13 @@ import org.bukkit.scheduler.*;
 
 /**
  * DoomSchedule regenerates the world, a chunk at a time. Each chunk is filled
- * with a Warning- presently a stream of lava- before it is regenerated. Home
- * chunks are skipped.
+ * with a Warning- presently a pillar of glowstone- before it is regenerated.
+ * Home chunks are skipped.
  *
  * The dooms schedule passes through loaded chunks in straight lines. It is not
  * guaranteed to hit every chunk; it passes through a random x or z row, then
- * picks another.
+ * picks another. It will hit nether chunks if they are loaded, but not end
+ * chunks.
  *
  * @author DanJ and Applejinx
  */
@@ -63,8 +64,8 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
 
         for (ChunkPosition where : loadDoomedChunks()) {
             System.out.println(String.format(
-                    "Regenerating leftover chunk at %d, %d",
-                    where.x * 16 + 8, where.z * 16 + 8));
+                    "Regenerating leftover chunk at %d, %d (%s)",
+                    where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
             World world = where.getWorld(server);
             world.regenerateChunk(where.x, where.z);
@@ -115,9 +116,29 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     private void beginSegmentOfDoom(ChunkPosition where) {
         if (doomedChunks.add(where)) {
             System.out.println(String.format(
-                    "Doom at %d, %d", where.x * 16 + 8, where.z * 16 + 8));
+                    "Doom at %d, %d (%s)", where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
-            placeSegmentOfDoomLater(where, 15);
+            World world = where.getWorld(plugin.getServer());
+
+            int maxChunkY;
+
+            switch (world.getEnvironment()) {
+                case NORMAL:
+                    maxChunkY = 15;
+                    break;
+                case THE_END:
+                    maxChunkY = 7;
+                    break;
+                case NETHER:
+                    maxChunkY = 7;
+                    break;
+                default:
+                    throw new IllegalStateException(String.format(
+                            "The environment '%s' is not known.",
+                            world.getEnvironment()));
+            }
+
+            placeSegmentOfDoomLater(where, maxChunkY);
             saveDoomedChunks();
         }
     }
@@ -231,9 +252,9 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
         doomSchedule.clear();
 
         if (isX) {
-            getLoadedChunkXRow(doomSchedule, origin.x);
+            getLoadedChunkXRow(doomSchedule, origin);
         } else {
-            getLoadedChunkZRow(doomSchedule, origin.z);
+            getLoadedChunkZRow(doomSchedule, origin);
         }
 
         if (reversed) {
@@ -248,11 +269,11 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * parameter, and adds each one to 'destination'.
      *
      * @param destination The collection to populate.
-     * @param x The chunk-x co-ordinate for the row you want.
+     * @param origin A chunk that is in the row we want.
      */
-    private void getLoadedChunkXRow(Collection<ChunkPosition> destination, int x) {
+    private void getLoadedChunkXRow(Collection<ChunkPosition> destination, ChunkPosition origin) {
         for (ChunkPosition pos : loadedChunks) {
-            if (pos.x == x) {
+            if (pos.x == origin.x && pos.worldName.equals(origin.worldName)) {
                 destination.add(pos);
             }
         }
@@ -263,11 +284,11 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * parameter, and adds each one to 'destination'.
      *
      * @param destination The collection to populate.
-     * @param z The chunk-z co-ordinate for the row you want.
+     * @param origin A chunk that is in the row we want.
      */
-    private void getLoadedChunkZRow(Collection<ChunkPosition> destination, int z) {
+    private void getLoadedChunkZRow(Collection<ChunkPosition> destination, ChunkPosition origin) {
         for (ChunkPosition pos : loadedChunks) {
-            if (pos.z == z) {
+            if (pos.z == origin.z && pos.worldName.equals(origin.worldName)) {
                 destination.add(pos);
             }
         }
@@ -281,7 +302,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     public void onChunkLoad(ChunkLoadEvent e) {
         Chunk chunk = e.getChunk();
 
-        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
+        if (chunk.getWorld().getEnvironment() != World.Environment.THE_END) {
             loadedChunks.add(ChunkPosition.of(chunk));
         }
     }
@@ -290,7 +311,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     public void onChunkUnload(ChunkUnloadEvent e) {
         Chunk chunk = e.getChunk();
 
-        if (chunk.getWorld().getEnvironment() == World.Environment.NORMAL) {
+        if (chunk.getWorld().getEnvironment() != World.Environment.THE_END) {
             loadedChunks.remove(ChunkPosition.of(chunk));
         }
     }
