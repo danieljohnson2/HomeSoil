@@ -121,11 +121,21 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
+                    String shooterName = shooter.getName();
+                    String victimName = victim.getName();
                     int numberOfFireworks = shooterInfo.getHomeChunks().size();
-
-                    //here, we play a server message to everyone on the server
-                    //it says, "Foo took over Bar's chunk, and now controls Baz!"
-                    //Foo shooter, Bar victim, Baz numberOfFireworks (before we multiply it)
+                    List<ChunkPosition> homes = shooterInfo.getHomeChunks();
+                    String msg = null;
+                    msg = String.format(
+                            "§6%s took over %s's chunk and now controls %d!§r",
+                            shooterName,
+                            victimName,
+                            homes.size());
+                    if (msg != null) {
+                        for (Player p : Bukkit.getOnlinePlayers()) {
+                            p.sendMessage(msg);
+                        }
+                    }
 
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
 
