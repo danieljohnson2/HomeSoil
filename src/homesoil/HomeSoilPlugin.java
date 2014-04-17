@@ -135,6 +135,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         p.sendMessage(msg);
                     }
 
+                    System.out.println(msg);
+                    //also log the message to console
+                    
                     int numberOfFireworks = homes.size();
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
 
@@ -292,7 +295,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             String name = player.getName();
 
             for (ChunkPosition homeChunk : playerInfos.get(player).getHomeChunks()) {
-                getLogger().warning(String.format("'%s' joined the game, and has been given home chunk %s.",
+                System.out.println(String.format("'%s' joined the game, and has been given home chunk %s.",
                         name,
                         homeChunk));
             }
