@@ -54,12 +54,11 @@ public final class ChunkPosition implements MapFileMap.Storable, Comparable<Chun
     /**
      * This method returns the world that contains the chunk named.
      *
-     * @param server THe server that contains the world objects.
      * @return The specific world that contains this position.
      * @throws IllegalStateException If the world named does not exist at all.
      */
-    public World getWorld(Server server) {
-        World world = server.getWorld(worldName);
+    public World getWorld() {
+        World world = Bukkit.getWorld(worldName);
 
         if (world == null) {
             throw new IllegalStateException(String.format(

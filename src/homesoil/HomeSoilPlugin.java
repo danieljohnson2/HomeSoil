@@ -116,27 +116,26 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
 
             if (victimInfo.getHomeChunks().contains(victimChunk)) {
-                playerInfos.removeHomeChunk(victim, victimChunk, getServer());
+                playerInfos.removeHomeChunk(victim, victimChunk);
 
                 if (victim.getPlayer() != shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
+
                     String shooterName = shooter.getName();
                     String victimName = victim.getName();
-                    int numberOfFireworks = shooterInfo.getHomeChunks().size();
                     List<ChunkPosition> homes = shooterInfo.getHomeChunks();
-                    String msg = null;
-                    msg = String.format(
+                    String msg = String.format(
                             "§6%s took over %s's chunk and now controls %d!§r",
                             shooterName,
                             victimName,
                             homes.size());
-                    if (msg != null) {
-                        for (Player p : Bukkit.getOnlinePlayers()) {
-                            p.sendMessage(msg);
-                        }
+
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        p.sendMessage(msg);
                     }
 
+                    int numberOfFireworks = homes.size();
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
 
                     if (numberOfFireworks > 0) {
@@ -215,7 +214,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param victim The guy whose name is on the snowball.
      */
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
-        List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim, getServer()));
+        List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim));
 
         if (!victimSpawns.isEmpty()) {
             // ugly, but we can only work with spawns in the same world, so

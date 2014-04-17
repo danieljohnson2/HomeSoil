@@ -58,8 +58,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * this.
      */
     public void start() {
-        Server server = plugin.getServer();
-        server.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         runTaskTimer(plugin, 10, doomChunkDelay);
 
         for (ChunkPosition where : loadDoomedChunks()) {
@@ -67,7 +66,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
                     "Regenerating leftover chunk at %d, %d (%s)",
                     where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
-            World world = where.getWorld(server);
+            World world = where.getWorld();
             world.regenerateChunk(where.x, where.z);
         }
     }
@@ -118,7 +117,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             System.out.println(String.format(
                     "Doom at %d, %d (%s)", where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
-            World world = where.getWorld(plugin.getServer());
+            World world = where.getWorld();
 
             int maxChunkY;
 
@@ -207,7 +206,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
      */
     private void placeSegmentOfDoom(ChunkPosition where, int chunkY) {
-        World world = where.getWorld(plugin.getServer());
+        World world = where.getWorld();
 
         if (chunkY <= 0) {
             world.regenerateChunk(where.x, where.z);
