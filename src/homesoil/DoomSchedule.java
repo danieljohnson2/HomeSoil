@@ -84,7 +84,7 @@ public final class DoomSchedule implements Listener {
 
     private long getDoomChunkDelay() {
         final long expectedChunksPerPlayer = 550;
-        return  (doomChunkDelay * expectedChunksPerPlayer) / Math.max(expectedChunksPerPlayer, loadedChunks.size());
+        return (doomChunkDelay * expectedChunksPerPlayer) / Math.max(expectedChunksPerPlayer, loadedChunks.size());
         //The delay between pillars is a factor of how many players are online using up chunks in the game:
         //with multiple players in distinct locations, the pillar has less delay and moves faster.
         //Scales up to hundreds of players without overloading the server and causing lag.
@@ -197,10 +197,13 @@ public final class DoomSchedule implements Listener {
             block.setType(Material.GLOWSTONE);
         }
 
-        Location thunderLoc = new Location(world, centerX, 64, centerZ);
-        float thunderPitch = 0.5f;
-        world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 8.0f, thunderPitch);
-
+        Location thunderLoc = new Location(world, centerX, 140, centerZ);
+        float thunderPitch = 2.0f;
+        world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 9.0f, thunderPitch);
+        thunderLoc = new Location(world, centerX, 1, centerZ);
+        thunderPitch = 0.5f;
+        world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 13.0f, thunderPitch);
+        
         regenerateChunkLater(where, doomChunkLifetime);
     }
 
