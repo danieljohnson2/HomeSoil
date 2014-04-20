@@ -26,10 +26,11 @@ import org.bukkit.scheduler.*;
  *
  * @author DanJ and Applejinx
  */
-public final class DoomSchedule extends BukkitRunnable implements Listener {
+public final class DoomSchedule implements Listener {
 
     private final File regenFile;
     private final HomeSoilPlugin plugin;
+    private BukkitTask nextDoomPillar;
 
     public DoomSchedule(HomeSoilPlugin plugin, File regenFile) {
         this.plugin = Preconditions.checkNotNull(plugin);
@@ -55,7 +56,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      */
     public void start() {
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        runTaskTimer(plugin, 10, doomChunkDelay);
+        runDoomScheduleLater();
 
         for (ChunkPosition where : loadDoomedChunks()) {
             System.out.println(String.format(
@@ -73,13 +74,38 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * all over again.
      */
     public void stop() {
-        cancel();
+        if (nextDoomPillar != null) {
+            nextDoomPillar.cancel();
+        }
+
         HandlerList.unregisterAll(this);
         saveDoomedChunks();
     }
 
-    @Override
-    public void run() {
+    private long getDoomChunkDelay() {
+        final long expectedChunksPerPlayer = 550;
+        return  (doomChunkDelay * expectedChunksPerPlayer) / Math.max(expectedChunksPerPlayer, loadedChunks.size());
+        //The delay between pillars is a factor of how many players are online using up chunks in the game:
+        //with multiple players in distinct locations, the pillar has less delay and moves faster.
+        //Scales up to hundreds of players without overloading the server and causing lag.
+        //We can go to nearly 4 and still run, but mob AI gets real jerky.
+    }
+
+    private void runDoomScheduleLater() {
+        long delay = getDoomChunkDelay();
+
+        nextDoomPillar = new BukkitRunnable() {
+            @Override
+            public void run() {
+                nextDoomPillar = null;
+                runDoomSchedule();
+            }
+        }.runTaskLater(plugin, delay);
+    }
+
+    private void runDoomSchedule() {
+        runDoomScheduleLater();
+
         if (!loadedChunks.isEmpty()) {
             if (doomSchedule.isEmpty()) {
                 prepareDoomSchedule();
@@ -88,7 +114,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             if (!doomSchedule.isEmpty()) {
                 ChunkPosition where = doomSchedule.get(0);
                 if (!plugin.getPlayerInfos().getHomeChunks().contains(where)) {
-                    beginSegmentOfDoom(where);
+                    beginPillarOfDoom(where);
                 }
                 //we need to remove the entry whether or not we placed a pillar
                 //because if it's a home chunk, otherwise it freezes
@@ -108,7 +134,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      *
      * @param where The chunk that is doomed.
      */
-    private void beginSegmentOfDoom(ChunkPosition where) {
+    private void beginPillarOfDoom(ChunkPosition where) {
         if (doomedChunks.add(where)) {
             System.out.println(String.format(
                     "Doom at %d, %d (%s)", where.x * 16 + 8, where.z * 16 + 8, where.worldName));
@@ -174,7 +200,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
         Location thunderLoc = new Location(world, centerX, 64, centerZ);
         float thunderPitch = 0.5f;
         world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 8.0f, thunderPitch);
-        
+
         regenerateChunkLater(where, doomChunkLifetime);
     }
 
@@ -266,7 +292,6 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
 
         if (chunk.getWorld().getEnvironment() != World.Environment.THE_END) {
             loadedChunks.add(ChunkPosition.of(chunk));
-            System.out.println("Loaded chunks: " + loadedChunks.size());
         }
     }
 
