@@ -39,15 +39,11 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     // Scheduling
     //
     /**
-     * This delay is how many ticks we wait between segments of the doom
-     * pillars.
-     */
-    private final int doomSegmentDelay = 18;
-    /**
      * This delay is how long we wait between doom pillars; we compute this to
      * be long enough that only one pillar at a time is in play.
      */
-    private final int doomChunkDelay = doomSegmentDelay * 16;
+    private final int doomChunkDelay = 256;
+    private final int doomChunkLifetime = 128;
 
     /**
      * This method is called to start the task; it schedules it to run
@@ -117,27 +113,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
             System.out.println(String.format(
                     "Doom at %d, %d (%s)", where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
-            World world = where.getWorld();
-
-            int maxChunkY;
-
-            switch (world.getEnvironment()) {
-                case NORMAL:
-                    maxChunkY = 15;
-                    break;
-                case THE_END:
-                    maxChunkY = 7;
-                    break;
-                case NETHER:
-                    maxChunkY = 7;
-                    break;
-                default:
-                    throw new IllegalStateException(String.format(
-                            "The environment '%s' is not known.",
-                            world.getEnvironment()));
-            }
-
-            placeSegmentOfDoomLater(where, maxChunkY);
+            placePillarOfDoom(where);
             saveDoomedChunks();
         }
     }
@@ -173,28 +149,6 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
     }
 
     /**
-     * This method does not do anything now, but schedules a segment of the
-     * pillar; this segment fills a 16x16x16 area, specified in chunk
-     * co-ordinates. The topmost chunk is at chunkY=15.
-     *
-     * We start the doom pillar by passing 15 here. After a delay, the chunk
-     * will be updated, and then this method is called again to do the next
-     * lower chunk. When we hit 0, we regenerate instead of building a doom
-     * pillar.
-     *
-     * @param where The chunk to be filled with doom.
-     * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
-     */
-    private void placeSegmentOfDoomLater(final ChunkPosition where, final int chunkY) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                placeSegmentOfDoom(where, chunkY);
-            }
-        }.runTaskLater(plugin, doomSegmentDelay);
-    }
-
-    /**
      * This method places a doom pillar segment; if chunkY is 0, this
      * regenerates the chunk.
      *
@@ -205,30 +159,39 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
      * @param where The chunk to be filled with doom.
      * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
      */
-    private void placeSegmentOfDoom(ChunkPosition where, int chunkY) {
+    private void placePillarOfDoom(ChunkPosition where) {
         World world = where.getWorld();
 
-        if (chunkY <= 0) {
-            world.regenerateChunk(where.x, where.z);
-            if (doomedChunks.remove(where)) {
-                saveDoomedChunks();
+        int centerX = (where.x * 16) + 8;
+        int centerZ = (where.z * 16) + 8;
+
+        for (int y = 1; y < 255; ++y) {
+            Location loc = new Location(world, centerX, y, centerZ);
+            Block block = world.getBlockAt(loc);
+            block.setType(Material.GLOWSTONE);
+        }
+
+        Location thunderLoc = new Location(world, centerX, 64, centerZ);
+        float thunderPitch = 0.5f;
+        world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 8.0f, thunderPitch);
+        
+        regenerateChunkLater(where, doomChunkLifetime);
+    }
+
+    private void regenerateChunkLater(final ChunkPosition where, long delay) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                regenerateChunk(where);
             }
-        } else {
-            int top = chunkY * 16;
-            int centerX = (where.x * 16) + 8;
-            int centerZ = (where.z * 16) + 8;
+        }.runTaskLater(plugin, delay);
+    }
 
-            for (int y = top - 16; y < top; ++y) {
-                Location loc = new Location(world, centerX, y, centerZ);
-                Block block = world.getBlockAt(loc);
-                block.setType(Material.GLOWSTONE);
-            }
-
-            Location thunderLoc = new Location(world, centerX, top, centerZ);
-            float thunderPitch = (0.5f + (top / 512));
-            world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 8.0f, thunderPitch);
-
-            placeSegmentOfDoomLater(where, chunkY - 1);
+    private void regenerateChunk(ChunkPosition where) {
+        World world = where.getWorld();
+        world.regenerateChunk(where.x, where.z);
+        if (doomedChunks.remove(where)) {
+            saveDoomedChunks();
         }
     }
     ////////////////////////////////////////////////////////////////
@@ -303,6 +266,7 @@ public final class DoomSchedule extends BukkitRunnable implements Listener {
 
         if (chunk.getWorld().getEnvironment() != World.Environment.THE_END) {
             loadedChunks.add(ChunkPosition.of(chunk));
+            System.out.println("Loaded chunks: " + loadedChunks.size());
         }
     }
 
