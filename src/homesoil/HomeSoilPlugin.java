@@ -304,54 +304,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         }
 
         bestowSnowball(player);
-        
-        System.out.println("!!");
-        sendScoresTo(player);
+        playerInfos.sendScoresTo(player);
     }
 
-    private void sendScoresTo(Player recipient) {
-        OfflinePlayer[] players = getServer().getOfflinePlayers();
-        List<Integer> scores = Lists.newArrayListWithCapacity(players.length);
-
-        for (OfflinePlayer p : players) {
-            if (playerInfos.isKnown(p)) {
-                Integer score = playerInfos.get(p).getHomeChunks().size();
-
-                if (!scores.contains(score)) {
-                    scores.add(score);
-                }
-            }
-        }
-
-        Collections.sort(scores, Collections.reverseOrder());
-
-        for (int rank = 0; rank < 3 && rank < scores.size(); ++rank) {
-            int rankScore = scores.get(rank);
-
-            for (OfflinePlayer p : players) {
-                if (playerInfos.isKnown(p)) {
-                    int score = playerInfos.get(p).getHomeChunks().size();
-
-                    if (score == rankScore) {
-                        sendPlayerScoreTo(recipient, p, rank, score);
-                    }
-                }
-            }
-        }
-    }
-
-    private void sendPlayerScoreTo(Player recipient, OfflinePlayer winner, int rank, int score) {
-        String[] formats = 
-        {
-            "§eGold: %s (%d chunks)§r",
-            "§7Silver: %s (%d chunks)§r",
-            "§6Bronze: %s (%d chunks)§r"
-        };
-
-        String msg = String.format(formats[rank], winner.getName(), score);
-        recipient.sendMessage(msg);
-    }
-    
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         Player player = e.getPlayer();

@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.*;
 import org.bukkit.*;
 import org.bukkit.block.*;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 
 /**
@@ -331,6 +332,69 @@ public final class PlayerInfoMap {
                 return homeChunk;
             }
         }
+    }
+
+    ////////////////////////////////
+    // Scoring
+    //
+    /**
+     * This method sends messages to the recipient given listing the high
+     * scoring players. We report the top three scores, but this may be more
+     * than 3 players if there are ties. Also, players with only one chunk are
+     * omitted.
+     *
+     * @param recipient The player to send the messages to.
+     */
+    public void sendScoresTo(CommandSender recipient) {
+        OfflinePlayer[] players = Bukkit.getOfflinePlayers();
+        List<Integer> scores = Lists.newArrayListWithCapacity(players.length);
+
+        for (OfflinePlayer p : players) {
+            if (isKnown(p)) {
+                Integer score = get(p).getHomeChunks().size();
+
+                if (!scores.contains(score)) {
+                    scores.add(score);
+                }
+            }
+        }
+
+        Collections.sort(scores, Collections.reverseOrder());
+
+        for (int rank = 0; rank < 3 && rank < scores.size(); ++rank) {
+            int rankScore = scores.get(rank);
+
+            for (OfflinePlayer p : players) {
+                if (isKnown(p)) {
+                    int score = get(p).getHomeChunks().size();
+
+                    if (score == rankScore) {
+                        String msg = getScoreMessage(p, rank, score);
+                        recipient.sendMessage(msg);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * This method returns the message to send to report a particular
+     * high-scoring player's score. The 'rank' indicates the gold/silver/ bronze
+     * distinction; 0 is best and 1 is second best, etc.
+     *
+     * @param winner The high-scoring player
+     * @param rank The rang (gold, silver, etc) of the winner.
+     * @param score The score of the winner.
+     * @return The message to send (including chat formatting codes).
+     */
+    private static String getScoreMessage(OfflinePlayer winner, int rank, int score) {
+        String[] formats = {
+            "§eGold: %s (%d chunks)§r",
+            "§7Silver: %s (%d chunks)§r",
+            "§6Bronze: %s (%d chunks)§r"
+        };
+
+        return String.format(formats[rank], winner.getName(), score);
     }
     ////////////////////////////////
     // Loading and Saving
