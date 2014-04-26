@@ -82,6 +82,12 @@ public final class DoomSchedule implements Listener {
         saveDoomedChunks();
     }
 
+    /**
+     * This method returns the number of ticks to wait between placing pillars.
+     * This varies depending on how many chunks are loaded.
+     *
+     * @return The delay in ticks.
+     */
     private long getDoomChunkDelay() {
         final long expectedChunksPerPlayer = 550;
         return (doomChunkDelay * expectedChunksPerPlayer) / Math.max(expectedChunksPerPlayer, loadedChunks.size());
@@ -91,6 +97,10 @@ public final class DoomSchedule implements Listener {
         //We can go to nearly 4 and still run, but mob AI gets real jerky.
     }
 
+    /**
+     * This method schedules the next step in the doom schedule to run after the
+     * delay that getDoomChunkDelay() provides.
+     */
     private void runDoomScheduleLater() {
         long delay = getDoomChunkDelay();
 
@@ -103,6 +113,13 @@ public final class DoomSchedule implements Listener {
         }.runTaskLater(plugin, delay);
     }
 
+    /**
+     * This method runs the next step of the doom schedule; if we don't have
+     * one, this will create a doom schedule and also do the first chunk in it.
+     *
+     * This method also calls runDoomScheduleLater() to schedule the next doom
+     * chunk after this one.
+     */
     private void runDoomSchedule() {
         runDoomScheduleLater();
 
@@ -139,8 +156,10 @@ public final class DoomSchedule implements Listener {
             System.out.println(String.format(
                     "Doom at %d, %d (%s)", where.x * 16 + 8, where.z * 16 + 8, where.worldName));
 
-            placePillarOfDoom(where);
             saveDoomedChunks();
+
+            placePillarOfDoom(where);
+            regenerateChunkLater(where, doomChunkLifetime);
         }
     }
 
@@ -175,15 +194,10 @@ public final class DoomSchedule implements Listener {
     }
 
     /**
-     * This method places a doom pillar segment; if chunkY is 0, this
-     * regenerates the chunk.
-     *
-     * If it does not regenerate the chunk, then it will schedule the next chunk
-     * of the pillar. This means we don't need to keep so many runnables alive
-     * at once.
+     * This method places a doom pillar, a tall pillar of glowstone to make a
+     * place that we will regenerate soon.
      *
      * @param where The chunk to be filled with doom.
-     * @param chunkY The y-chunk to affect. If 0, we regenerate instead.
      */
     private void placePillarOfDoom(ChunkPosition where) {
         World world = where.getWorld();
@@ -203,10 +217,15 @@ public final class DoomSchedule implements Listener {
         thunderLoc = new Location(world, centerX, 1, centerZ);
         thunderPitch = 0.5f;
         world.playSound(thunderLoc, Sound.AMBIENCE_THUNDER, 13.0f, thunderPitch);
-        
-        regenerateChunkLater(where, doomChunkLifetime);
     }
 
+    /**
+     * This method regenerates a specified chunk, but does so after a specified
+     * delay.
+     *
+     * @param where The chunk to regenerate.
+     * @param delay The number of ticks to wait before doing so.
+     */
     private void regenerateChunkLater(final ChunkPosition where, long delay) {
         new BukkitRunnable() {
             @Override
@@ -216,6 +235,13 @@ public final class DoomSchedule implements Listener {
         }.runTaskLater(plugin, delay);
     }
 
+    /**
+     * This method regenerates a specific chunk. This will remove the chunk from
+     * the list of doomed chunks, since it will not regenerate on server
+     * restart.
+     *
+     * @param where The chunk to regenerate.
+     */
     private void regenerateChunk(ChunkPosition where) {
         World world = where.getWorld();
         world.regenerateChunk(where.x, where.z);
