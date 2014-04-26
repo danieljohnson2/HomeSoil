@@ -261,7 +261,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     private void bestowSnowball(Player player) {
         PlayerInventory inventory = player.getInventory();
 
-        ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 4);
+        ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 16);
         ItemMeta meta = itemStack.getItemMeta().clone();
         meta.setDisplayName(player.getName());
         meta.setLore(Arrays.asList(
