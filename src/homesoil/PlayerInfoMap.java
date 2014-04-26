@@ -351,9 +351,12 @@ public final class PlayerInfoMap {
 
         for (OfflinePlayer p : players) {
             if (isKnown(p)) {
-                Integer score = get(p).getHomeChunks().size();
+                int score = get(p).getHomeChunks().size();
 
-                if (!scores.contains(score)) {
+                // We ignore players with only one chunk. That's
+                // what you start with!
+                
+                if (score > 1 && !scores.contains(score)) {
                     scores.add(score);
                 }
             }
