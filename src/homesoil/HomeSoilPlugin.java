@@ -261,7 +261,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     private void bestowSnowball(Player player) {
         PlayerInventory inventory = player.getInventory();
 
-        ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 16);
+        ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 8);
         ItemMeta meta = itemStack.getItemMeta().clone();
         meta.setDisplayName(player.getName());
         meta.setLore(Arrays.asList(
@@ -350,12 +350,12 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         if (toPlayer.getPlayer() == player) {
                             // silly rabbit, clicks are for kids! (sorry)
                             player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
-
                             msg = String.format(
                                     "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
                                     chunkNo + 1,
                                     homes.size());
                         } else if (isEnteringFormerHome) {
+                            player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
                             msg = String.format(
                                     "§6This is §l%s's§r§6 home chunk (#%d of %d)§r",
                                     toPlayerName,
