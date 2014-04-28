@@ -118,7 +118,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             if (victimInfo.getHomeChunks().contains(victimChunk)) {
                 playerInfos.removeHomeChunk(victim, victimChunk);
 
-                if (victim.getPlayer() != shooter) {
+                if (victim.getPlayer() == shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
 
@@ -176,7 +176,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             public void run() {
                 if (fireworksRemaining > 0) {
                     launchFirework(launchPoint);
-                    dropXpFrom(xpDropPoint, 1);
+                    dropXpFrom(xpDropPoint, 1.0, fireworksRemaining);
                     --fireworksRemaining;
                 } else {
                     // once there are no more fireworks, we can finally stop
@@ -220,19 +220,21 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     /**
      * This method spawns some experience orbs at the indicated location. They
      * add up to enough experience to gain the specified number of levels
-     * (assuming 17 points per level). The individual orb size is randomized,
-     * but always adds to the right total.
+     * (assuming 17 points per level).
+     *
+     * The orb size is given; we use hte largest orbs on the first firework,
+     * then go down from there. The last firework winds up having orb size 1.
      *
      * @param spawnLocation The place to spawn the XP orbs.
      * @param levels The number of levels to grant.
+     * @param orbSize The size of the orbs to drop (the last one may be smaller)
      */
-    private void dropXpFrom(Location spawnLocation, double levels) {
+    private void dropXpFrom(Location spawnLocation, double levels, int orbSize) {
         World world = spawnLocation.getWorld();
 
         int xp = (int) Math.round(levels * 17);
 
         while (xp > 0) {
-            int orbSize = xpRandom.nextInt(7) + 1; /* from 1 to 7 xp per orb */
             ExperienceOrb orb = (ExperienceOrb) world.spawnEntity(spawnLocation, EntityType.EXPERIENCE_ORB);
             orb.setExperience(Math.min(xp, orbSize));
             xp -= orbSize;
