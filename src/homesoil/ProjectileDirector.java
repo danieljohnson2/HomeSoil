@@ -107,9 +107,14 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
         vec.setZ(dz);
 
         projectile.setVelocity(vec);
+       //attempt to read projectile for name, didn't work because
+       //no projectile has a name: this is a routine linked to the specific
+       //projectile. I don't want to just duplicate it needlessly, we need to pass
+        //in a 'named target' boolean or something. If there was a name when
+        //it was launched, we also do
         projectile.setFireTicks(100);
-        //if they are the seeking snowballs, they are on fire
-        //because why not? Easier to see, too
+        
+        //if there was no name, the snowball homes to destination but is not on fire.
     }
 
     @EventHandler
