@@ -157,20 +157,26 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * This method schedules a firework barrage to be launched; the task
      * launches one every ten ticks until it has fired off enough.
      *
+     * We also drop XP orbs when the fireworks go off; this method handles all
+     * that too.
+     *
      * @param spawnLocation The point from which the firework will spawn.
      * @param numberOfFireworks The number of fireworks.
      */
     private void launchFireworksLater(final Location spawnLocation, final int numberOfFireworks) {
         new BukkitRunnable() {
             // lets be safe and not let the location change while we are doing this!
-            private Location fixedSpawnLocation = spawnLocation.clone();
+            private final Location launchPoint = spawnLocation.clone();
+            // we'll drop XP from a higher point so it 'showers' down
+            private final Location xpDropPoint = spawnLocation.clone().add(0, 8, 0);
             // this field will count down the firewsorks so we know when to stop
             private int fireworksRemaining = numberOfFireworks;
 
             @Override
             public void run() {
                 if (fireworksRemaining > 0) {
-                    launchFirework(fixedSpawnLocation);
+                    launchFirework(launchPoint);
+                    dropXpFrom(xpDropPoint, 1);
                     --fireworksRemaining;
                 } else {
                     // once there are no more fireworks, we can finally stop
@@ -182,7 +188,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     }
 
     /**
-     * This method spawns a firework to celebrate stealing a chunk.
+     * This method spawns a firework to celebrate stealing a chunk. It also
+     * drops some XP orbs in the bargain.
      *
      * @param spawnLocation The point from which the firework will spawn.
      */
@@ -207,6 +214,29 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         meta.addEffect(effect);
         meta.setPower(2);
         firework.setFireworkMeta(meta);
+    }
+    private final Random xpRandom = new Random();
+
+    /**
+     * This method spawns some experience orbs at the indicated location. They
+     * add up to enough experience to gain the specified number of levels
+     * (assuming 17 points per level). The individual orb size is randomized,
+     * but always adds to the right total.
+     *
+     * @param spawnLocation The place to spawn the XP orbs.
+     * @param levels The number of levels to grant.
+     */
+    private void dropXpFrom(Location spawnLocation, double levels) {
+        World world = spawnLocation.getWorld();
+
+        int xp = (int) Math.round(levels * 17);
+
+        while (xp > 0) {
+            int orbSize = xpRandom.nextInt(7) + 1; /* from 1 to 7 xp per orb */
+            ExperienceOrb orb = (ExperienceOrb) world.spawnEntity(spawnLocation, EntityType.EXPERIENCE_ORB);
+            orb.setExperience(Math.min(xp, orbSize));
+            xp -= orbSize;
+        }
     }
 
     /**
