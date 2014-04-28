@@ -97,6 +97,18 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                         saveIfNeeded();
                     }
                 }
+                else
+                {
+                    //unnamed snowball
+                    OfflinePlayer nearestChunk = null;
+                    //must return nearest chunk out of all possible chunks
+
+                    if (nearestChunk != null) {
+                         directFlamingSnowball(projectile, nearestChunk);
+                        //do not need saveIfNeeded as unnamed can never steal chunks
+                    }
+                }
+                }
             }
         }
     }
