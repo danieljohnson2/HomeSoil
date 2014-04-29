@@ -14,10 +14,8 @@ import org.bukkit.event.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.*;
-import org.bukkit.inventory.meta.*;
 
 import org.bukkit.util.Vector;
-import org.bukkit.FireworkEffect.Type;
 
 /**
  * This class runs 'in the background' and updates the velocity of a projectile
@@ -35,10 +33,12 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
 
     private final Projectile projectile;
     private final Location destination;
+    private final boolean isOnFire;
 
-    private ProjectileDirector(Projectile projectile, Location destination) {
+    private ProjectileDirector(Projectile projectile, Location destination, boolean isOnFire) {
         this.projectile = Preconditions.checkNotNull(projectile);
         this.destination = Preconditions.checkNotNull(destination);
+        this.isOnFire = isOnFire;
     }
 
     /**
@@ -47,10 +47,11 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
      *
      * @param projectile The projectile to guide.
      * @param destination The place to send the projectile.
+     * @param isOnFire True if the projectile should be on file too!
      * @param plugin Our plugin. There can be only one, probably.
      */
-    public static void begin(Projectile projectile, Location destination, Plugin plugin) {
-        ProjectileDirector director = new ProjectileDirector(projectile, destination);
+    public static void begin(Projectile projectile, Location destination, boolean isOnFire, Plugin plugin) {
+        ProjectileDirector director = new ProjectileDirector(projectile, destination, isOnFire);
         plugin.getServer().getPluginManager().registerEvents(director, plugin);
         director.runTaskTimer(plugin, 1, 1);
     }
@@ -107,14 +108,12 @@ public final class ProjectileDirector extends BukkitRunnable implements Listener
         vec.setZ(dz);
 
         projectile.setVelocity(vec);
-       //attempt to read projectile for name, didn't work because
-       //no projectile has a name: this is a routine linked to the specific
-       //projectile. I don't want to just duplicate it needlessly, we need to pass
-        //in a 'named target' boolean or something. If there was a name when
-        //it was launched, we also do
-        projectile.setFireTicks(100);
-        
-        //if there was no name, the snowball homes to destination but is not on fire.
+
+        if (isOnFire) {
+            // We have a rule that named snowballs burn (for some reason),
+            // but anonymousones don't. The 'isOnFire' flag tells us what to do.
+            projectile.setFireTicks(100);
+        }
     }
 
     @EventHandler
