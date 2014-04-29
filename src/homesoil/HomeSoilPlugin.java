@@ -21,7 +21,7 @@ import org.bukkit.scheduler.*;
  * @author DanJ
  */
 public class HomeSoilPlugin extends JavaPlugin implements Listener {
-
+    
     private static final File playersFile = new File("HomeSoil.txt");
     private static final File regenFile = new File("HomeSoilDoom.txt");
     private final PlayerInfoMap playerInfos = new PlayerInfoMap();
@@ -42,7 +42,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void load() {
         getLogger().info("Loading HomeSoil State");
-
+        
         if (playersFile.exists()) {
             playerInfos.load(playersFile);
         }
@@ -64,47 +64,43 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         super.onEnable();
-
+        
         load();
         getServer().getPluginManager().registerEvents(this, this);
         doomSchedule.start();
     }
-
+    
     @Override
     public void onDisable() {
         saveIfNeeded();
         doomSchedule.stop();
-
+        
         super.onDisable();
     }
-
+    
     @EventHandler
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
         Projectile projectile = e.getEntity();
         LivingEntity shooter = projectile.getShooter();
         if (shooter instanceof Player) {
             ItemStack held = shooter.getEquipment().getItemInHand();
-
+            
             if (held != null && held.getType() == Material.SNOW_BALL) {
                 ItemMeta itemMeta = held.getItemMeta();
                 if (itemMeta.hasDisplayName()) {
                     String displayName = held.getItemMeta().getDisplayName();
                     OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
-
+                    
                     if (victimPlayer != null) {
                         tryToStealHomeChunk((Player) shooter, victimPlayer);
                         directFlamingSnowball(projectile, victimPlayer);
                         saveIfNeeded();
                     }
                 } else {
-                    //unnamed snowball
-                    OfflinePlayer nearestChunk = null;
-                    //must return nearest chunk out of all possible chunks
-
-                    if (nearestChunk != null) {
-                        directFlamingSnowball(projectile, nearestChunk);
-                        //do not need saveIfNeeded as unnamed can never steal chunks
-                    }
+                    // anonymous snowballs can't steal chunks, but they can
+                    // stil fly towards one!
+                    
+                    directFlamingSnowballToAnybody(projectile);
                 }
             }
         }
@@ -123,14 +119,14 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         if (playerInfos.isKnown(victim)) {
             PlayerInfo victimInfo = playerInfos.get(victim);
             ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
-
+            
             if (victimInfo.getHomeChunks().contains(victimChunk)) {
                 playerInfos.removeHomeChunk(victim, victimChunk);
-
+                
                 if (victim.getPlayer() == shooter) {
                     PlayerInfo shooterInfo = playerInfos.get(shooter);
                     shooterInfo.addHomeChunk(victimChunk);
-
+                    
                     String shooterName = shooter.getName();
                     String victimName = victim.getName();
                     List<ChunkPosition> homes = shooterInfo.getHomeChunks();
@@ -139,17 +135,17 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                             shooterName,
                             victimName,
                             homes.size());
-
+                    
                     for (Player p : Bukkit.getOnlinePlayers()) {
                         p.sendMessage(msg);
                     }
-
+                    
                     System.out.println(msg);
                     //also log the message to console
 
                     int numberOfFireworks = homes.size();
                     numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
-
+                    
                     if (numberOfFireworks > 0) {
                         launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                     }
@@ -180,7 +176,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             private final Location xpDropPoint = spawnLocation.clone().add(0, 8, 0);
             // this field will count down the firewsorks so we know when to stop
             private int fireworksRemaining = numberOfFireworks;
-
+            
             @Override
             public void run() {
                 if (fireworksRemaining > 0) {
@@ -240,9 +236,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      */
     private void dropXpFrom(Location spawnLocation, double levels, int orbSize) {
         World world = spawnLocation.getWorld();
-
+        
         int xp = (int) Math.round(levels * 17);
-
+        
         while (xp > 0) {
             ExperienceOrb orb = (ExperienceOrb) world.spawnEntity(spawnLocation, EntityType.EXPERIENCE_ORB);
             orb.setExperience(Math.min(xp, orbSize));
@@ -258,14 +254,43 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param victim The guy whose name is on the snowball.
      */
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
-        Location start = projectile.getLocation().clone();
-        start.add(0, 1, 0);
-        projectile.teleport(start);
-
         List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim));
-        sequenceSnowballTargets(start, victimSpawns);
+        directFlamingSnowballCore(projectile, victimSpawns);
+    }
 
+    /**
+     * This method creates a scheduled task that manipulates the projectile
+     * given so that it flies towards the nearest player start of any player.
+     *
+     * @param projectile The snowball.
+     */
+    private void directFlamingSnowballToAnybody(Projectile projectile) {
+        List<Location> victimSpawns = Lists.newArrayList();
+        
+        for (OfflinePlayer victim : playerInfos.getKnownPlayers()) {
+            victimSpawns.addAll(playerInfos.getPlayerStarts(victim));
+        }
+        
+        directFlamingSnowballCore(projectile, victimSpawns);
+    }
+
+    /**
+     * This method provides the implementation for the directFlamingSnowball
+     * methods. It is given the list of candidate targets, but it will modify
+     * the list and the locations in it; the list should not be used again after
+     * this call.
+     *
+     * @param projectile The snowball to send toward the nearest victimeSpawn.
+     * @param victimSpawns THe candidate locations to send the projectile to;
+     * will be modified.
+     */
+    private void directFlamingSnowballCore(Projectile projectile, List<Location> victimSpawns) {
         if (!victimSpawns.isEmpty()) {
+            Location start = projectile.getLocation().clone().add(0, 1, 0);
+            projectile.teleport(start);
+            
+            sequenceSnowballTargets(start, victimSpawns);
+            
             Location destination = victimSpawns.get(0);
 
             // the snowball will be moved by the server updating its position
@@ -292,9 +317,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         for (Location spawn : targets) {
             ChunkPosition.translateToWorld(spawn, world);
         }
-
+        
         class DistanceComparator implements Comparator<Location> {
-
+            
             @Override
             public int compare(Location left, Location right) {
                 // this compares by distance from 'start', ascending, so the
@@ -315,7 +340,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
     @SuppressWarnings("deprecation")
     private void bestowSnowball(Player player) {
         PlayerInventory inventory = player.getInventory();
-
+        
         ItemStack itemStack = new ItemStack(Material.SNOW_BALL, 8);
         ItemMeta meta = itemStack.getItemMeta().clone();
         meta.setDisplayName(player.getName());
@@ -324,14 +349,14 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 "home soil"));
         itemStack.setItemMeta(meta);
         inventory.setItem(35, itemStack);
-
+        
         player.updateInventory();
     }
-
+    
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         final HumanEntity clicked = e.getWhoClicked();
-
+        
         if (clicked instanceof Player) {
             new BukkitRunnable() {
                 @Override
@@ -341,34 +366,34 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
             }.runTaskLater(this, 1);
         }
     }
-
+    
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
-
+        
         if (!playerInfos.isKnown(player)) {
             String name = player.getName();
-
+            
             for (ChunkPosition homeChunk : playerInfos.get(player).getHomeChunks()) {
                 System.out.println(String.format("'%s' joined the game, and has been given home chunk %s.",
                         name,
                         homeChunk));
             }
-
+            
             saveIfNeeded();
         }
-
+        
         bestowSnowball(player);
         playerInfos.sendScoresTo(player);
     }
-
+    
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         Player player = e.getPlayer();
         bestowSnowball(player);
         e.setRespawnLocation(playerInfos.getPlayerStart(player));
     }
-
+    
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         // We decided to keep this, but try to optimize by only checking
@@ -377,31 +402,31 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         if (e.getTo().getChunk() != e.getFrom().getChunk()) {
             ChunkPosition fromChunk = ChunkPosition.of(e.getFrom());
             ChunkPosition toChunk = ChunkPosition.of(e.getTo());
-
+            
             String fromPlayerName = playerInfos.identifyChunkOwner(fromChunk);
             String toPlayerName = playerInfos.identifyChunkOwner(toChunk);
-
+            
             if (!fromPlayerName.equals(toPlayerName)) {
                 Player player = e.getPlayer();
                 PlayerInfo playerInfo = playerInfos.get(player);
-
+                
                 boolean isEntering = !toPlayerName.isEmpty();
                 boolean isEnteringFormerHome = isEntering && playerInfo.getHistoricalHomeChunks().contains(toChunk);
-
+                
                 if (fromPlayerName.equals(player.getName())) {
                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
                 }
-
+                
                 if (isEntering) {
                     OfflinePlayer toPlayer = getServer().getOfflinePlayer(toPlayerName);
-
+                    
                     if (toPlayer != null && playerInfos.isKnown(toPlayer)) {
                         PlayerInfo toInfo = playerInfos.get(toPlayer);
                         List<ChunkPosition> homes = toInfo.getHomeChunks();
                         int chunkNo = homes.indexOf(toChunk);
-
+                        
                         String msg = null;
-
+                        
                         if (toPlayer.getPlayer() == player) {
                             // silly rabbit, clicks are for kids! (sorry)
                             player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
@@ -417,7 +442,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                     chunkNo + 1,
                                     homes.size());
                         }
-
+                        
                         if (msg != null) {
                             player.sendMessage(msg);
                         }

@@ -58,6 +58,26 @@ public final class PlayerInfoMap {
     }
 
     /**
+     * This method returns a new, immutable set containing all the players for
+     * which isKnown() is true, even if they are not logged in.
+     *
+     * @return An immutable set containing all players.
+     */
+    public Set<OfflinePlayer> getKnownPlayers() {
+        ImmutableSet.Builder<OfflinePlayer> b = ImmutableSet.builder();
+
+        for (String playerName : infos.keySet()) {
+            OfflinePlayer pl = Bukkit.getOfflinePlayer(playerName);
+
+            if (pl != null) {
+                b.add(pl);
+            }
+        }
+
+        return b.build();
+    }
+
+    /**
      * This method determines whether a given player already has a PlayerInfo
      * assigned, but does not actually create one; this therefore will not throw
      * even if the player is actually offline.
@@ -355,7 +375,7 @@ public final class PlayerInfoMap {
 
                 // We ignore players with only one chunk. That's
                 // what you start with!
-                
+
                 if (score > 1 && !scores.contains(score)) {
                     scores.add(score);
                 }
