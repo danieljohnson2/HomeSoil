@@ -258,39 +258,53 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * @param victim The guy whose name is on the snowball.
      */
     private void directFlamingSnowball(Projectile projectile, OfflinePlayer victim) {
+        Location start = projectile.getLocation().clone();
+        start.add(0, 1, 0);
+        projectile.teleport(start);
+
         List<Location> victimSpawns = Lists.newArrayList(playerInfos.getPlayerStarts(victim));
+        sequenceSnowballTargets(start, victimSpawns);
 
         if (!victimSpawns.isEmpty()) {
-            // ugly, but we can only work with spawns in the same world, so
-            // we translate them all. This relies on getPlayerStarts() returning
-            // clones, which it does, but ew.
-
-            for (Location spawn : victimSpawns) {
-                ChunkPosition.translateToWorld(spawn, projectile.getWorld());
-            }
-
-            final Location start = projectile.getLocation().clone();
-            start.add(0, 1, 0);
-            projectile.teleport(start);
-
-            class DistanceComparator implements Comparator<Location> {
-
-                @Override
-                public int compare(Location left, Location right) {
-                    // this compares by distance from 'start', ascending, so the
-                    // nearest location is first.
-                    return (int) Math.signum(start.distanceSquared(left) - start.distanceSquared(right));
-                }
-            }
-
-            // we target the closest spawn the victim has.
-            Collections.sort(victimSpawns, new DistanceComparator());
             Location destination = victimSpawns.get(0);
 
             // the snowball will be moved by the server updating its position
             // periodically; this is done in a scheduled task.
             ProjectileDirector.begin(projectile, destination, this);
         }
+    }
+
+    /**
+     * This method places a list of locations in the ascending order of distance
+     * from a start point. The points are not only sorted, but individually
+     * translated into the same world as 'start'.
+     *
+     * @param start The starting point we order the targets by nearness to this.
+     * @param targets The list to update in place; must be mutable.
+     */
+    private void sequenceSnowballTargets(final Location start, List<Location> targets) {
+        World world = start.getWorld();
+
+        // ugly, but we can only work with spawns in the same world, so
+        // we translate them all. This relies on getPlayerStarts() returning
+        // clones, which it does, but ew.
+
+        for (Location spawn : targets) {
+            ChunkPosition.translateToWorld(spawn, world);
+        }
+
+        class DistanceComparator implements Comparator<Location> {
+
+            @Override
+            public int compare(Location left, Location right) {
+                // this compares by distance from 'start', ascending, so the
+                // nearest location is first.
+                return (int) Math.signum(start.distanceSquared(left) - start.distanceSquared(right));
+            }
+        }
+
+        // we target the closest spawn the victim has.
+        Collections.sort(targets, new DistanceComparator());
     }
 
     /**
