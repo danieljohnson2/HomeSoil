@@ -59,7 +59,9 @@ public final class PlayerInfoMap {
 
     /**
      * This method returns a new, immutable set containing all the players for
-     * which isKnown() is true, even if they are not logged in.
+     * which isKnown() is true, even if they are not logged in or have never
+     * played before. (Players who have never played can happen if you have
+     * edited the HomeSoil.txt file yourself!)
      *
      * @return An immutable set containing all players.
      */
@@ -67,11 +69,9 @@ public final class PlayerInfoMap {
         ImmutableSet.Builder<OfflinePlayer> b = ImmutableSet.builder();
 
         for (String playerName : infos.keySet()) {
-            OfflinePlayer pl = Bukkit.getOfflinePlayer(playerName);
-
-            if (pl != null) {
-                b.add(pl);
-            }
+            // getOfflinePlayer() returns non-null for any name;
+            // you can create arbitrary 'offline player' objects.
+            b.add(Bukkit.getOfflinePlayer(playerName));
         }
 
         return b.build();

@@ -91,7 +91,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     String displayName = held.getItemMeta().getDisplayName();
                     OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
 
-                    if (victimPlayer != null) {
+                    if (playerInfos.isKnown(victimPlayer)) {
                         tryToStealHomeChunk((Player) shooter, victimPlayer);
                         directFlamingSnowball(projectile, victimPlayer);
                         saveIfNeeded();
@@ -113,47 +113,46 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
      * snowball.
      *
      * @param shooter The snowball-throwing miscreant.
-     * @param victim The poor fellow named by the snowball.
+     * @param victim The poor fellow named by the snowball; must be a known
+     * player.
      */
     private void tryToStealHomeChunk(final Player shooter, OfflinePlayer victim) {
-        if (playerInfos.isKnown(victim)) {
-            PlayerInfo victimInfo = playerInfos.get(victim);
-            ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
+        PlayerInfo victimInfo = playerInfos.get(victim);
+        ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
 
-            if (victimInfo.getHomeChunks().contains(victimChunk)) {
-                playerInfos.removeHomeChunk(victim, victimChunk);
+        if (victimInfo.getHomeChunks().contains(victimChunk)) {
+            playerInfos.removeHomeChunk(victim, victimChunk);
 
-                if (victim.getPlayer() == shooter) {
-                    PlayerInfo shooterInfo = playerInfos.get(shooter);
-                    shooterInfo.addHomeChunk(victimChunk);
+            if (victim.getPlayer() == shooter) {
+                PlayerInfo shooterInfo = playerInfos.get(shooter);
+                shooterInfo.addHomeChunk(victimChunk);
 
-                    String shooterName = shooter.getName();
-                    String victimName = victim.getName();
-                    List<ChunkPosition> homes = shooterInfo.getHomeChunks();
-                    String msg = String.format(
-                            "§6%s took over %s's chunk and now controls %d!§r",
-                            shooterName,
-                            victimName,
-                            homes.size());
+                String shooterName = shooter.getName();
+                String victimName = victim.getName();
+                List<ChunkPosition> homes = shooterInfo.getHomeChunks();
+                String msg = String.format(
+                        "§6%s took over %s's chunk and now controls %d!§r",
+                        shooterName,
+                        victimName,
+                        homes.size());
 
-                    for (Player p : Bukkit.getOnlinePlayers()) {
-                        p.sendMessage(msg);
-                    }
-
-                    System.out.println(msg);
-                    //also log the message to console
-
-                    int numberOfFireworks = homes.size();
-                    numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
-
-                    if (numberOfFireworks > 0) {
-                        launchFireworksLater(shooter.getLocation(), numberOfFireworks);
-                    }
-                } else {
-                    shooter.setHealth(shooter.getMaxHealth());
-                    //bump up shooter health to full, because
-                    //they are sacrificing their chunk for a health buff
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    p.sendMessage(msg);
                 }
+
+                System.out.println(msg);
+                //also log the message to console
+
+                int numberOfFireworks = homes.size();
+                numberOfFireworks = Math.min(500, numberOfFireworks * numberOfFireworks);
+
+                if (numberOfFireworks > 0) {
+                    launchFireworksLater(shooter.getLocation(), numberOfFireworks);
+                }
+            } else {
+                shooter.setHealth(shooter.getMaxHealth());
+                //bump up shooter health to full, because
+                //they are sacrificing their chunk for a health buff
             }
         }
     }
@@ -421,7 +420,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 if (isEntering) {
                     OfflinePlayer toPlayer = getServer().getOfflinePlayer(toPlayerName);
 
-                    if (toPlayer != null && playerInfos.isKnown(toPlayer)) {
+                    if (playerInfos.isKnown(toPlayer)) {
                         PlayerInfo toInfo = playerInfos.get(toPlayer);
                         List<ChunkPosition> homes = toInfo.getHomeChunks();
                         int chunkNo = homes.indexOf(toChunk);
