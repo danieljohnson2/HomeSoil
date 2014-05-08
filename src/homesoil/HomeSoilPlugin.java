@@ -123,7 +123,9 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         if (victimInfo.getHomeChunks().contains(victimChunk)) {
             playerInfos.removeHomeChunk(victim, victimChunk);
 
-            if (victim.getPlayer() == shooter) {
+            if (victim.getPlayer() != shooter) {
+                // this branch is for the case where we're stealing another players home
+
                 PlayerInfo shooterInfo = playerInfos.get(shooter);
                 shooterInfo.addHomeChunk(victimChunk);
 
@@ -150,6 +152,8 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                     launchFireworksLater(shooter.getLocation(), numberOfFireworks);
                 }
             } else {
+                // This branch is for throwing a snowball in your own chunk.
+
                 shooter.setHealth(shooter.getMaxHealth());
                 //bump up shooter health to full, because
                 //they are sacrificing their chunk for a health buff
@@ -219,7 +223,6 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
         meta.setPower(2);
         firework.setFireworkMeta(meta);
     }
-    private final Random xpRandom = new Random();
 
     /**
      * This method spawns some experience orbs at the indicated location. They
