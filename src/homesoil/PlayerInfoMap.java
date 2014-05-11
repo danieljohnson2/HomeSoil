@@ -17,6 +17,8 @@ import org.bukkit.entity.*;
  */
 public final class PlayerInfoMap {
 
+    public final static String COMMON_PLAYER_NAME = "COMMONS";
+    
     private final Map<String, PlayerInfo> infos = Maps.newHashMap();
     private final Map<ChunkPosition, String> homeChunkOwners = Maps.newHashMap();
     private int homeChunkOwnersGenCount = 0;
@@ -107,6 +109,29 @@ public final class PlayerInfoMap {
                 pickNewHomeChunk(world, info);
             }
         }
+    }
+
+    /**
+     * This method adds a new home chunk for a player; if he already has the
+     * chunk it does nothing. If the player is not known, we create the
+     * PlayerInfo object, and it will then contain only the new chunk. After
+     * this method, the player will be known (even if it was previously
+     * unknown).
+     *
+     * @param player The player to give the new chunk to (may be offline).
+     * @param newChunk The new chunk to give.
+     */
+    public void addHomeChunk(OfflinePlayer player, ChunkPosition newChunk) {
+        String name = player.getName();
+
+        PlayerInfo info = infos.get(name);
+
+        if (info == null) {
+            info = new PlayerInfo();
+            infos.put(name, info);
+        }
+
+        info.addHomeChunk(newChunk);
     }
 
     /**
@@ -370,7 +395,7 @@ public final class PlayerInfoMap {
         List<Integer> scores = Lists.newArrayListWithCapacity(players.length);
 
         for (OfflinePlayer p : players) {
-            if (isKnown(p)) {
+            if (isKnown(p) && !p.getName().equals(COMMON_PLAYER_NAME)) {
                 int score = get(p).getHomeChunks().size();
 
                 // We ignore players with only one chunk. That's
@@ -388,7 +413,7 @@ public final class PlayerInfoMap {
             int rankScore = scores.get(rank);
 
             for (OfflinePlayer p : players) {
-                if (isKnown(p)) {
+                if (isKnown(p) && !p.getName().equals(COMMON_PLAYER_NAME)) {
                     int score = get(p).getHomeChunks().size();
 
                     if (score == rankScore) {

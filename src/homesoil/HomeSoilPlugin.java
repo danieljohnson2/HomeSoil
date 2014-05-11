@@ -89,16 +89,24 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 ItemMeta itemMeta = held.getItemMeta();
                 if (itemMeta.hasDisplayName()) {
                     String displayName = held.getItemMeta().getDisplayName();
-                    OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
 
-                    if (playerInfos.isKnown(victimPlayer)) {
-                        tryToStealHomeChunk((Player) shooter, victimPlayer);
-                        directFlamingSnowball(projectile, victimPlayer);
-                        saveIfNeeded();
+                    if (displayName.equals(PlayerInfoMap.COMMON_PLAYER_NAME)) {
+                        if (playerInfos.isKnown((Player) shooter)) {
+                            tryToContributeCommonHomeChunk((Player) shooter);
+                        }
+                    } else {
+                        OfflinePlayer victimPlayer = getServer().getOfflinePlayer(displayName);
+
+                        if (playerInfos.isKnown(victimPlayer)) {
+                            tryToStealHomeChunk((Player) shooter, victimPlayer);
+                            directFlamingSnowball(projectile, victimPlayer);
+                        }
                     }
+
+                    saveIfNeeded();
                 } else {
                     // anonymous snowballs can't steal chunks, but they can
-                    // stil fly towards one!
+                    // still fly towards one!
 
                     directFlamingSnowballToAnybody(projectile);
                 }
@@ -158,6 +166,33 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                 //bump up shooter health to full, because
                 //they are sacrificing their chunk for a health buff
             }
+        }
+    }
+
+    private void tryToContributeCommonHomeChunk(final Player shooter) {
+        PlayerInfo shooterInfo = playerInfos.get(shooter);
+        ChunkPosition victimChunk = ChunkPosition.of(shooter.getLocation());
+
+        if (shooterInfo.getHomeChunks().contains(victimChunk)) {
+            playerInfos.removeHomeChunk(shooter, victimChunk);
+
+            // this branch is for the case where we're stealing another players home
+
+            OfflinePlayer commons = getServer().getOfflinePlayer(PlayerInfoMap.COMMON_PLAYER_NAME);
+            playerInfos.addHomeChunk(commons, victimChunk);
+
+            String shooterName = shooter.getName();
+
+            String msg = String.format(
+                    "§6%s gave up one of their chunks!§r",
+                    shooterName);
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.sendMessage(msg);
+            }
+
+            System.out.println(msg);
+            //also log the message to console
         }
     }
 
@@ -415,6 +450,7 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
 
                 boolean isEntering = !toPlayerName.isEmpty();
                 boolean isEnteringFormerHome = isEntering && playerInfo.getHistoricalHomeChunks().contains(toChunk);
+                boolean isEnteringCommonsHome = isEntering && toPlayerName.equals(PlayerInfoMap.COMMON_PLAYER_NAME);
 
                 if (fromPlayerName.equals(player.getName())) {
                     player.getWorld().playEffect(player.getLocation(), Effect.CLICK2, 0);
@@ -437,6 +473,11 @@ public class HomeSoilPlugin extends JavaPlugin implements Listener {
                                     "§6This is §lyour§r§6 home chunk (#%d of %d)§r",
                                     chunkNo + 1,
                                     homes.size());
+                        } else if (isEnteringCommonsHome) {
+                            player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
+                            msg = String.format(
+                                    "§6This is §leverybody's§r§6 home chunk§r",
+                                    toPlayerName);
                         } else if (isEnteringFormerHome) {
                             player.getWorld().playEffect(player.getLocation(), Effect.CLICK1, 0);
                             msg = String.format(
