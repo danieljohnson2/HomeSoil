@@ -42,8 +42,16 @@ public final class DoomSchedule implements Listener {
     /**
      * This delay is how long we wait between doom pillars; we compute this to
      * be long enough that only one pillar at a time is in play.
+     * It scales with the number of players online and the amount of terrain
+     * they are covering, and 256 gives you a fairly lively pillar that will
+     * keep everything pretty Sierra Club pristine.
+     * 4096 should simulate lack of a regen mechanism, but it'll still be out
+     * there somewhere endangering non-Home builds.
+     * Possibly a pay-to-win mechanic where you buy regen bombs?
+     * Lifetime puts a delay into the system while calling the regen queue,
+     * creating a delay.
      */
-    private final int doomChunkDelay = 256;
+    private final int doomChunkDelay = 4096;
     private final int doomChunkLifetime = 128;
 
     /**
@@ -146,8 +154,9 @@ public final class DoomSchedule implements Listener {
 
     /**
      * This method starts the process of regenerating a chunk; it records the
-     * chunk as 'doomed' in the doomed chunk file, and kicks off the lava
-     * pillar.
+     * chunk as 'doomed' in the doomed chunk file, and kicks off the glowstone
+     * pillar. Lifetime is the time it'll take to perform the pillar and
+     * then call for regen.
      *
      * @param where The chunk that is doomed.
      */
