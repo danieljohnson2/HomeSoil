@@ -45,13 +45,13 @@ public final class DoomSchedule implements Listener {
      * It scales with the number of players online and the amount of terrain
      * they are covering, and 256 gives you a fairly lively pillar that will
      * keep everything pretty Sierra Club pristine.
-     * 4096 should simulate lack of a regen mechanism, but it'll still be out
+     * 512 is a bit more sedate, while still using the mechanism.
+     * 4096 can simulate lack of a regen mechanism, but it'll still be out
      * there somewhere endangering non-Home builds.
-     * Possibly a pay-to-win mechanic where you buy regen bombs?
      * Lifetime puts a delay into the system while calling the regen queue,
      * creating a delay.
      */
-    private final int doomChunkDelay = 4096;
+    private final int doomChunkDelay = 512;
     private final int doomChunkLifetime = 128;
 
     /**
