@@ -418,16 +418,20 @@ public final class MapFileMap extends HashMap<String, Object> {
         StringBuilder b = new StringBuilder(text);
 
         for (int i = 0; i < b.length() - 1; ++i) {
-            if (b.charAt(i) == '\\') {
+            if (b.charAt(i) == '§') {
                 char next = b.charAt(i + 1);
+                String replacement;
+
                 if (next == 'n') {
-                    b.replace(i, 2, NEW_LINE);
-                    i += NEW_LINE.length() - 1;
+                    replacement = NEW_LINE;
                 } else if (next == '-') {
-                    b.replace(i, 2, "=");
+                    replacement = "=";
                 } else {
-                    b.replace(i, 1, "");
+                    replacement = "";
                 }
+
+                b.replace(i, 2, replacement);
+                i += replacement.length() - 1;
             }
         }
 
@@ -467,9 +471,9 @@ public final class MapFileMap extends HashMap<String, Object> {
      * contain maps, which are preserved.
      *
      * This method tries to write a temp file and rename it over the original;
-     * on typical modern file-system, this makes the update atomic. If the rename
-     * fails (ie, if the original is locked), we will rewrite the file directly
-     * if we can.
+     * on typical modern file-system, this makes the update atomic. If the
+     * rename fails (ie, if the original is locked), we will rewrite the file
+     * directly if we can.
      *
      * @param file The file to write to.
      * @param map The map to encode.
